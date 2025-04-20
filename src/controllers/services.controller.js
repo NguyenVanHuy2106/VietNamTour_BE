@@ -61,3 +61,32 @@ exports.createService = async (req, res) => {
     res.status(500).json({ message: "Lỗi server!" });
   }
 };
+
+exports.deleteService = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Kiểm tra xem có ID được truyền không
+    if (!id) {
+      return res.status(400).json({ message: "Thiếu ID dịch vụ cần xoá." });
+    }
+
+    // Tìm và xoá loại tour
+    const deleted = await Services.destroy({
+      where: { serviceid: id },
+    });
+
+    if (deleted === 0) {
+      return res
+        .status(404)
+        .json({ message: "Không tìm thấy dịch vụ để xoá." });
+    }
+
+    res.status(200).json({ message: "Xoá dịch vụ thành công." });
+  } catch (error) {
+    res.status(500).json({
+      message: "Lỗi server",
+      error: error.message,
+    });
+  }
+};

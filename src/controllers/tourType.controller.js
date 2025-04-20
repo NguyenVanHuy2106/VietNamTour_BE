@@ -69,3 +69,32 @@ exports.createTourType = async (req, res) => {
     });
   }
 };
+
+exports.deleteTourType = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Kiểm tra xem có ID được truyền không
+    if (!id) {
+      return res.status(400).json({ message: "Thiếu ID loại tour cần xoá." });
+    }
+
+    // Tìm và xoá loại tour
+    const deleted = await TourType.destroy({
+      where: { tourtypeid: id },
+    });
+
+    if (deleted === 0) {
+      return res
+        .status(404)
+        .json({ message: "Không tìm thấy loại tour để xoá." });
+    }
+
+    res.status(200).json({ message: "Xoá loại tour thành công." });
+  } catch (error) {
+    res.status(500).json({
+      message: "Lỗi server",
+      error: error.message,
+    });
+  }
+};

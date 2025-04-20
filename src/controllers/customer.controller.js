@@ -70,3 +70,31 @@ exports.createCustomer = async (req, res) => {
     });
   }
 };
+exports.deleteCustomer = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Kiểm tra xem có ID được truyền không
+    if (!id) {
+      return res.status(400).json({ message: "Thiếu ID khách hàng cần xoá." });
+    }
+
+    // Tìm và xoá loại tour
+    const deleted = await Customers.destroy({
+      where: { customerid: id },
+    });
+
+    if (deleted === 0) {
+      return res
+        .status(404)
+        .json({ message: "Không tìm thấy khách hàng để xoá." });
+    }
+
+    res.status(200).json({ message: "Xoá khách hàng thành công." });
+  } catch (error) {
+    res.status(500).json({
+      message: "Lỗi server",
+      error: error.message,
+    });
+  }
+};

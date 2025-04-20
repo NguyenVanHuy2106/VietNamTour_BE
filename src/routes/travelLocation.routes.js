@@ -4,10 +4,16 @@ const { verifyToken } = require("../middlewares/auth");
 
 const {
   getAllTravelLocation,
+  deleteTravelLocation,
 } = require("../controllers/travelLocation.controller");
 
 // Route thêm user
 
-router.get("/api/travelLocation/get", verifyToken, getAllTravelLocation);
+router.get("/api/travelLocation/get", getAllTravelLocation);
+router.delete(
+  "/api/travelLocation/delete/:id",
+  verifyToken,
+  deleteTravelLocation
+);
 
 module.exports = router;

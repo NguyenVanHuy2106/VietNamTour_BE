@@ -70,3 +70,30 @@ exports.createBanner = async (req, res) => {
     });
   }
 };
+
+exports.deleteBanner = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Kiểm tra xem có ID được truyền không
+    if (!id) {
+      return res.status(400).json({ message: "Vui lòng chọn banner cần xoá" });
+    }
+
+    // Tìm và xoá loại tour
+    const deleted = await Banners.destroy({
+      where: { bannerid: id },
+    });
+
+    if (deleted === 0) {
+      return res.status(404).json({ message: "Không tìm thấy banner để xoá." });
+    }
+
+    res.status(200).json({ message: "Xoá banner thành công." });
+  } catch (error) {
+    res.status(500).json({
+      message: "Lỗi server",
+      error: error.message,
+    });
+  }
+};

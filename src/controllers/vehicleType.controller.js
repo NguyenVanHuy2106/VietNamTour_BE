@@ -64,3 +64,34 @@ exports.createVehicleType = async (req, res) => {
     });
   }
 };
+
+exports.deleteVehicleType = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Kiểm tra xem có ID được truyền không
+    if (!id) {
+      return res
+        .status(400)
+        .json({ message: "Thiếu ID loại phương tiện cần xoá." });
+    }
+
+    // Tìm và xoá loại phương tiện
+    const deleted = await VehicleType.destroy({
+      where: { vehicletypeid: id },
+    });
+
+    if (deleted === 0) {
+      return res
+        .status(404)
+        .json({ message: "Không tìm thấy loại phương tiện để xoá." });
+    }
+
+    res.status(200).json({ message: "Xoá loại phương tiện thành công." });
+  } catch (error) {
+    res.status(500).json({
+      message: "Lỗi server",
+      error: error.message,
+    });
+  }
+};

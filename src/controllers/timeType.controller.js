@@ -61,3 +61,34 @@ exports.createTimeType = async (req, res) => {
     res.status(500).json({ message: "Lỗi server!" });
   }
 };
+
+exports.deleteTimeType = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Kiểm tra xem có ID được truyền không
+    if (!id) {
+      return res
+        .status(400)
+        .json({ message: "Thiếu ID loại thời gian cần xoá." });
+    }
+
+    // Tìm và xoá loại tour
+    const deleted = await TimeType.destroy({
+      where: { timetypeid: id },
+    });
+
+    if (deleted === 0) {
+      return res
+        .status(404)
+        .json({ message: "Không tìm thấy loại thời gian để xoá." });
+    }
+
+    res.status(200).json({ message: "Xoá loại thời gian thành công." });
+  } catch (error) {
+    res.status(500).json({
+      message: "Lỗi server",
+      error: error.message,
+    });
+  }
+};

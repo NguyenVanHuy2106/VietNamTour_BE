@@ -61,3 +61,32 @@ exports.createHotelType = async (req, res) => {
     res.status(500).json({ message: "Lỗi server!" });
   }
 };
+
+exports.deleteHotelType = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Kiểm tra xem có ID được truyền không
+    if (!id) {
+      return res.status(400).json({ message: "Thiếu id loiaj nơi ở cần xoá." });
+    }
+
+    // Tìm và xoá loại tour
+    const deleted = await HotelType.destroy({
+      where: { hoteltypeid: id },
+    });
+
+    if (deleted === 0) {
+      return res
+        .status(404)
+        .json({ message: "Không tìm thấy loại nơi ở để xoá." });
+    }
+
+    res.status(200).json({ message: "Xoá loại nơi ở thành công." });
+  } catch (error) {
+    res.status(500).json({
+      message: "Lỗi server",
+      error: error.message,
+    });
+  }
+};
