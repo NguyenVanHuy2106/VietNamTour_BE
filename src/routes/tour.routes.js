@@ -7,6 +7,7 @@ const {
   getTourById,
   getAllTours,
   updateTour,
+  deleteTour,
 } = require("../controllers/tour.controller");
 
 // Route thêm user
@@ -20,6 +21,8 @@ router.post("/api/tour/update", verifyToken, updateTour);
 router.get("/api/tour/get/:tourid", getTourById);
 
 router.get("/api/tour/get", getAllTours);
+
+router.delete("/api/tour/delete/:tourid", verifyToken, deleteTour);
 
 // router.delete("/api/timeType/delete/:id", verifyToken, deleteTimeType);
 

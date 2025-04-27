@@ -342,5 +342,68 @@ const updateTour = async (req, res) => {
     });
   }
 };
+const deleteTour = async (req, res) => {
+  const t = await Tour.sequelize.transaction(); // Mở transaction
+  try {
+    const { tourid } = req.params; // Lấy tourid từ URL params
 
-module.exports = { createTour, getTourById, getAllTours, updateTour };
+    // 1. Tạo mảng các promise để xóa dữ liệu song song
+    const deletePromises = [
+      // Xóa các hình ảnh liên quan đến tour
+      TourImage.destroy({
+        where: { tourid },
+        transaction: t,
+      }),
+
+      // Xóa số lượng tour
+      TourQuantity.destroy({
+        where: { tourid },
+        transaction: t,
+      }),
+
+      // Xóa giá tour
+      TourPrice.destroy({
+        where: { tourid },
+        transaction: t,
+      }),
+
+      // Xóa chi tiết tour
+      TourDetail.destroy({
+        where: { tourid },
+        transaction: t,
+      }),
+
+      // Xóa tour chính
+      Tour.destroy({
+        where: { tourid },
+        transaction: t,
+      }),
+    ];
+
+    // 2. Thực hiện tất cả các promise song song
+    await Promise.all(deletePromises);
+
+    // 3. Commit transaction nếu tất cả đều thành công
+    await t.commit();
+
+    res
+      .status(200)
+      .json({ success: true, message: "Tour deleted successfully" });
+  } catch (error) {
+    await t.rollback(); // Rollback nếu có lỗi
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to delete tour",
+      error: error.message,
+    });
+  }
+};
+
+module.exports = {
+  createTour,
+  getTourById,
+  getAllTours,
+  updateTour,
+  deleteTour,
+};
