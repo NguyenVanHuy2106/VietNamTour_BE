@@ -9,6 +9,7 @@ const hotelTypeRoutes = require("./hotelType.routes");
 const vehicleTypeRoutes = require("./vehicleType.routes");
 const timeTypeRoutes = require("./timeType.routes");
 const bannerRoutes = require("./banner.routes");
+const tourRoutes = require("./tour.routes");
 
 module.exports = [
   userRoutes,
@@ -22,4 +23,5 @@ module.exports = [
   vehicleTypeRoutes,
   timeTypeRoutes,
   bannerRoutes,
+  tourRoutes,
 ];

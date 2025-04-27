@@ -2,7 +2,7 @@
 const express = require("express");
 const cors = require("cors"); // ✅ Thêm cors vào
 const app = express();
-const sequelize = require("./config/database");
+//const sequelize = require("./config/database");
 const routes = require("./routes");
 // Mở cors cho tất cả domain (nếu muốn giới hạn thì cấu hình cụ thể)
 app.use(cors()); // ✅ Kích hoạt CORS
