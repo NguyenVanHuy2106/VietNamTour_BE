@@ -1,4 +1,5 @@
 // const { fetchAndSaveProvinces } = require("./config/fetchProvince");
+require("dotenv").config(); // <-- dòng đầu
 const express = require("express");
 const cors = require("cors"); // ✅ Thêm cors vào
 const app = express();
