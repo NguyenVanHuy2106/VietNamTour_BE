@@ -47,3 +47,31 @@ exports.createCollection = async (req, res) => {
     });
   }
 };
+exports.deleteCollection = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Kiểm tra xem có ID được truyền không
+    if (!id) {
+      return res.status(400).json({ message: "Thiếu ID khách hàng cần xoá." });
+    }
+
+    // Tìm và xoá loại tour
+    const deleted = await Collections.destroy({
+      where: { collectionid: id },
+    });
+
+    if (deleted === 0) {
+      return res
+        .status(404)
+        .json({ message: "Không tìm thấy hình anhe để xoá." });
+    }
+
+    res.status(200).json({ message: "Xoá hình ảnh thành công." });
+  } catch (error) {
+    res.status(500).json({
+      message: "Lỗi server",
+      error: error.message,
+    });
+  }
+};

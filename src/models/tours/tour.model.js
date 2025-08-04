@@ -31,9 +31,11 @@ const Tour = sequelize.define(
     },
     startdate: {
       type: DataTypes.DATE,
+      allowNull: true,
     },
     enddate: {
       type: DataTypes.DATE,
+      allowNull: true,
     },
     vehicletypeid: {
       type: DataTypes.NUMBER,
@@ -46,6 +48,10 @@ const Tour = sequelize.define(
     },
     status: {
       type: DataTypes.INTEGER,
+    },
+    tourtype: {
+      type: DataTypes.STRING,
+      allowNull: true,
     },
   },
   {

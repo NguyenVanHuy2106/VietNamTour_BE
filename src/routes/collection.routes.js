@@ -5,6 +5,7 @@ const { verifyToken } = require("../middlewares/auth");
 const {
   getAllCollections,
   createCollection,
+  deleteCollection,
 } = require("../controllers/collection.controller");
 
 // Route thêm user
@@ -12,5 +13,6 @@ const {
 router.get("/api/collection/get", getAllCollections);
 
 router.post("/api/collection/add", verifyToken, createCollection);
+router.delete("/api/collection/delete/:id", verifyToken, deleteCollection);
 
 module.exports = router;

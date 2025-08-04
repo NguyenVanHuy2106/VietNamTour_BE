@@ -18,6 +18,7 @@ app.use(express.json()); // Middleware để parse JSON body
 
 // Route User
 // fetchAndSaveProvinces();
+
 routes.forEach((route) => {
   app.use(route);
 });

@@ -8,6 +8,10 @@ const {
   getAllTours,
   updateTour,
   deleteTour,
+  get8NewTours,
+  getDOANTours,
+  searchTour,
+  getRelationTours,
 } = require("../controllers/tour.controller");
 
 // Route thêm user
@@ -23,6 +27,14 @@ router.get("/api/tour/get/:tourid", getTourById);
 router.get("/api/tour/get", getAllTours);
 
 router.delete("/api/tour/delete/:tourid", verifyToken, deleteTour);
+
+router.get("/api/tour/get8new", get8NewTours);
+
+router.get("/api/tour/getDOANTour", getDOANTours);
+
+router.post("/api/tour/search", searchTour);
+
+router.post("/api/tour/relation", getRelationTours);
 
 // router.delete("/api/timeType/delete/:id", verifyToken, deleteTimeType);
 
