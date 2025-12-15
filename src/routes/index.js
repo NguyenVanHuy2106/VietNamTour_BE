@@ -13,6 +13,8 @@ const tourRoutes = require("./tour.routes");
 const categoriesRoutes = require("./categories.routes");
 const tagRoutes = require("./tag.routes");
 const postRoutes = require("./post.routes");
+const imgCatRoutes = require("./imgCategory.routes");
+const imageRoutes = require("./image.routes");
 
 module.exports = [
   userRoutes,
@@ -30,4 +32,6 @@ module.exports = [
   categoriesRoutes,
   tagRoutes,
   postRoutes,
+  imgCatRoutes,
+  imageRoutes,
 ];
