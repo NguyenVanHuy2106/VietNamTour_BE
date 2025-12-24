@@ -295,7 +295,7 @@ exports.getRelationPost = async (req, res) => {
     });
   }
 };
-
+// Huy cmt thêm nè
 exports.searchPost = async (req, res) => {
   try {
     const { category_id } = req.body;
