@@ -355,3 +355,38 @@ exports.searchPost = async (req, res) => {
     });
   }
 };
+
+exports.getCNDLPost = async (req, res) => {
+  try {
+    const { category_id } = req.body;
+
+    if (!category_id) {
+      return res.status(400).json({ message: "Thiếu category_id" });
+    }
+
+    const posts = await Post.findAll({
+      where: { category_id },
+      order: [["created_at", "ASC"]],
+      limit: 3,
+      distinct: true,
+      include: [
+        { model: User, as: "creator", attributes: ["user_id", "name"] },
+        {
+          model: Tag,
+          as: "tags",
+          attributes: ["tag_id", "tag_name"],
+          through: { attributes: [] },
+        },
+        {
+          model: Category,
+          as: "category",
+          attributes: ["category_id", "category_name"],
+        },
+      ],
+    });
+
+    res.json({ data: posts });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
