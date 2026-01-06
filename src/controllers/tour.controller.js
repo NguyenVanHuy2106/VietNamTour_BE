@@ -16,6 +16,7 @@ const createTour = async (req, res) => {
   try {
     const {
       tourname,
+      slug,
       description,
       destination,
       departure,
@@ -48,6 +49,7 @@ const createTour = async (req, res) => {
         created_at: new Date(),
         hoteltypeid,
         tourtype: isGroup ? "DOAN" : "",
+        slug,
       },
       { transaction: t }
     );
@@ -765,6 +767,75 @@ const getRelationTours = async (req, res) => {
     });
   }
 };
+const getTourBySlug = async (req, res) => {
+  const { slug } = req.params;
+
+  try {
+    // 1. Lấy thông tin tour chính
+    //const tour = await Tour.findByPk(tourid);
+
+    const tour = await Tour.findOne({
+      where: { slug: slug.trim() },
+    });
+
+    if (!tour) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Tour not found" });
+    }
+    const tourid = tour.tourid;
+    // 2. Lấy các bảng liên quan song song
+    const [
+      detail,
+      price,
+      quantity,
+      images,
+      destinationProvince,
+      departureProvince,
+      timeType,
+      vehicleType,
+      hotelType,
+      tourHighlight,
+    ] = await Promise.all([
+      TourDetail.findOne({ where: { tourid } }),
+      TourPrice.findOne({ where: { tourid } }),
+      TourQuantity.findOne({ where: { tourid } }),
+      TourImage.findAll({ where: { tourid } }),
+      TravelLocation.findByPk(tour.destination),
+      Province.findByPk(tour.departure),
+      TimeType.findByPk(tour.timetypeid),
+      VehicleType.findByPk(tour.vehicletypeid),
+      HotelType.findByPk(tour.hoteltypeid),
+      TourHighlight.findAll({ where: { tourid } }),
+    ]);
+
+    // 3. Gộp và trả về
+    //console.log(images);
+    return res.status(200).json({
+      success: true,
+      data: {
+        tour,
+        detail,
+        price,
+        quantity,
+        images,
+        destination_name: destinationProvince?.travellocationname || "",
+        departure_name: departureProvince?.provincename || "",
+        timetype_name: timeType?.timetypename || "",
+        vehicletype_name: vehicleType?.vehicletypename || "",
+        hoteltypename: hotelType?.hoteltypename || "",
+        highlights: tourHighlight,
+      },
+    });
+  } catch (error) {
+    //console.error("Error fetching tour by ID:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch tour details",
+      error: error.message,
+    });
+  }
+};
 
 module.exports = {
   createTour,
@@ -776,4 +847,5 @@ module.exports = {
   getDOANTours,
   searchTour,
   getRelationTours,
+  getTourBySlug,
 };

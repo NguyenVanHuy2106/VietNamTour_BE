@@ -390,3 +390,51 @@ exports.getCNDLPost = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+exports.getPostBySlug = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    if (!slug) {
+      return res.status(400).json({ message: "Slug không hợp lệ." });
+    }
+    //console.log(slug);
+
+    // 1. Tìm bài viết theo slug
+    const post = await Post.findOne({
+      where: { slug: slug.trim() },
+      include: [
+        {
+          model: Category,
+          as: "category", // đảm bảo đặt đúng alias nếu có
+          attributes: ["category_id", "category_name"],
+        },
+        {
+          model: Tag,
+          as: "tags", // đảm bảo đã thiết lập quan hệ belongsToMany
+          through: { attributes: [] }, // bỏ thông tin trung gian PostsTag
+          attributes: ["tag_id", "tag_name"],
+        },
+        {
+          model: User,
+          as: "creator",
+          attributes: ["user_id", "name"], // Giả sử model User dùng user_id
+        },
+      ],
+    });
+
+    if (!post) {
+      return res.status(404).json({ message: "Bài viết không tồn tại." });
+    }
+
+    return res.status(200).json({
+      message: "Lấy chi tiết bài viết thành công",
+      data: post,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      message: "Lỗi server",
+      error: error.message,
+    });
+  }
+};

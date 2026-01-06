@@ -17,8 +17,11 @@ const Posts = sequelize.define(
     title: {
       type: DataTypes.STRING,
     },
+    // Kiểm tra file models/Post.js
     slug: {
       type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
     },
     content: {
       type: DataTypes.STRING,

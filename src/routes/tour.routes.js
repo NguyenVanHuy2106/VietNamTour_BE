@@ -12,6 +12,7 @@ const {
   getDOANTours,
   searchTour,
   getRelationTours,
+  getTourBySlug,
 } = require("../controllers/tour.controller");
 
 // Route thêm user
@@ -23,6 +24,8 @@ router.post("/api/tour/add", verifyToken, createTour);
 router.post("/api/tour/update", verifyToken, updateTour);
 
 router.get("/api/tour/get/:tourid", getTourById);
+
+router.get("/api/tour/slug/:slug", getTourBySlug);
 
 router.get("/api/tour/get", getAllTours);
 

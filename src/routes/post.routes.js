@@ -10,6 +10,7 @@ const {
   getRelationPost,
   searchPost,
   getCNDLPost,
+  getPostBySlug,
 } = require("../controllers/post.controller");
 
 // Route thêm user
@@ -17,6 +18,8 @@ const {
 router.get("/api/post/get", getAllPost);
 
 router.get("/api/post/:id(\\d+)", getPostDetail);
+
+router.get("/api/post/slug/:slug", getPostBySlug);
 
 router.post("/api/post/add", verifyToken, createPost);
 

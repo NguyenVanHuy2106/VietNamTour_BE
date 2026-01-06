@@ -53,6 +53,9 @@ const Tour = sequelize.define(
       type: DataTypes.STRING,
       allowNull: true,
     },
+    slug: {
+      type: DataTypes.STRING,
+    },
   },
   {
     timestamps: false, // Không tự động thêm createdAt, updatedAt
