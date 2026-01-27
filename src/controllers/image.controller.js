@@ -109,3 +109,55 @@ exports.deleteImage = async (req, res) => {
     });
   }
 };
+
+exports.getImageByCategoryId = async (req, res) => {
+  try {
+    // Lấy category_id từ Body của request
+    const { category_id } = req.body;
+
+    if (!category_id) {
+      return res.status(400).json({
+        message: "Vui lòng cung cấp category_id trong body",
+      });
+    }
+
+    const images = await Image.findAll({
+      where: { category_id: category_id },
+      include: [
+        {
+          model: User,
+          as: "creator",
+          attributes: ["user_id", "name"],
+        },
+        {
+          model: ImgCat,
+          as: "category",
+          attributes: ["id", "name"],
+        },
+      ],
+    });
+
+    const formattedImages = images.map((image) => ({
+      ...image.toJSON(),
+      created_by: image.creator
+        ? `${image.creator.user_id} - ${image.creator.name}`
+        : "Không xác định",
+      category_name: image.category
+        ? `${image.category.id} - ${image.category.name}`
+        : "Không xác định",
+      creator: undefined,
+      category: undefined,
+    }));
+
+    res.status(200).json({
+      message:
+        "Lấy danh sách hình ảnh theo danh mục thành column body thành công",
+      data: formattedImages,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Lỗi server",
+      error: error.message,
+    });
+  }
+};

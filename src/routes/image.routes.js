@@ -6,11 +6,14 @@ const {
   createImages,
   getAllImage,
   deleteImage,
+  getImageByCategoryId,
 } = require("../controllers/image.controller");
 
 // Route thêm user
 
 router.get("/api/image/get", getAllImage);
+
+router.post("/api/image/getByCat", getImageByCategoryId);
 
 router.post("/api/image/add", verifyToken, createImages);
 

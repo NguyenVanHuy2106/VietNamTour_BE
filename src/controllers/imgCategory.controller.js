@@ -1,7 +1,10 @@
 const ImgCategory = require("../models/imgCategory.model");
+const { Sequelize } = require("sequelize");
+const Image = require("../models/image.model");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const User = require("../models/user.model");
+const { fn, col } = require("sequelize");
 
 exports.createImgCategory = async (req, res) => {
   try {
@@ -36,6 +39,18 @@ exports.createImgCategory = async (req, res) => {
 exports.getAllImgCategory = async (req, res) => {
   try {
     const imgCategory = await ImgCategory.findAll({
+      attributes: {
+        include: [
+          [
+            Sequelize.literal(`(
+              SELECT COUNT(*)
+              FROM mdm.md_image img
+              WHERE img.category_id = md_image_category.id
+            )`),
+            "total_images",
+          ],
+        ],
+      },
       include: [
         {
           model: User,
@@ -44,22 +59,20 @@ exports.getAllImgCategory = async (req, res) => {
         },
       ],
     });
-    const formattedProvinces = imgCategory.map((imgCategory) => ({
-      ...imgCategory.toJSON(),
-      created_by: imgCategory.creator
-        ? `${imgCategory.creator.user_id} - ${imgCategory.creator.name}`
-        : "Không xác định", // Trường hợp không có người tạo
+
+    const formatted = imgCategory.map((item) => ({
+      ...item.toJSON(),
+      created_by: item.creator
+        ? `${item.creator.user_id} - ${item.creator.name}`
+        : "Không xác định",
     }));
+
     res.status(200).json({
       message: "Lấy danh sách danh mục hình ảnh thành công",
-      data: formattedProvinces,
+      data: formatted,
     });
   } catch (error) {
-    //console.error("Lỗi khi lấy danh sách user:", error);
-    res.status(500).json({
-      message: "Lỗi server",
-      error: error.message,
-    });
+    res.status(500).json({ message: "Lỗi server", error: error.message });
   }
 };
 

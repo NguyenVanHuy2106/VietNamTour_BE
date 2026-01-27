@@ -30,7 +30,7 @@ const ImgCategory = sequelize.define(
   {
     timestamps: false, // Không tự động thêm createdAt, updatedAt
     schema: "mdm", // Map đúng schema "mdm"
-  }
+  },
 );
 ImgCategory.belongsTo(User, {
   foreignKey: "created_by",
