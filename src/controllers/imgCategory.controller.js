@@ -8,7 +8,7 @@ const { fn, col } = require("sequelize");
 
 exports.createImgCategory = async (req, res) => {
   try {
-    const { name, description, created_by } = req.body;
+    const { name, description, thumnail_url, created_by } = req.body;
 
     // Kiểm tra dữ liệu đầu vào
     if (!name || !created_by) {
@@ -21,6 +21,7 @@ exports.createImgCategory = async (req, res) => {
     const newImgCat = await ImgCategory.create({
       name,
       description,
+      thumnail_url,
       created_by,
       status: 1, // Mặc định là 1 (hoạt động)
       created_at: new Date(),

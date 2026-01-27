@@ -26,6 +26,9 @@ const ImgCategory = sequelize.define(
     status: {
       type: DataTypes.INTEGER,
     },
+    thumnail_url: {
+      type: DataTypes.STRING,
+    },
   },
   {
     timestamps: false, // Không tự động thêm createdAt, updatedAt
