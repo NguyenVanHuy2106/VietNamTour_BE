@@ -57,7 +57,7 @@ exports.createPost = async (req, res) => {
       },
       {
         transaction,
-      }
+      },
     );
 
     // 2. Kiểm tra các tag_id có tồn tại không
@@ -295,57 +295,122 @@ exports.getRelationPost = async (req, res) => {
     });
   }
 };
-// Huy cmt thêm nè
+//Huy cmt thêm nè
+// exports.searchPost = async (req, res) => {
+//   try {
+//     const { category_id } = req.body;
+//     const { Op } = require("sequelize");
+//     let whereClause = {};
+//     if (Array.isArray(category_id)) {
+//       whereClause.category_id = {
+//         [Op.in]: category_id, // ví dụ: [1, 2]
+//       };
+//     } else if (category_id !== undefined) {
+//       whereClause.category_id = category_id; // ví dụ: 1
+//     }
+//     const posts = await Post.findAll({
+//       where: whereClause,
+//       order: [["post_id", "DESC"]],
+//       include: [
+//         {
+//           model: User,
+//           as: "creator",
+//           attributes: ["user_id", "name"],
+//         },
+//         {
+//           model: Tag, // Tên model Tag
+//           as: "tags", // Alias bạn đã định nghĩa trong models/index.js
+//           attributes: ["tag_id", "tag_name"], // Các trường bạn muốn lấy từ bảng tag
+//           through: { attributes: [] }, // Tùy chọn để không lấy các trường từ bảng nối
+//         },
+//         {
+//           model: Category, // Tên model của bảng Category
+//           as: "category", // Alias cho mối quan hệ này (ví dụ: 'category')
+//           attributes: ["category_id", "category_name"], // Các trường bạn muốn lấy
+//         },
+//       ],
+//     });
+
+//     // Kiểm tra và định dạng lại dữ liệu nếu cần
+//     const formattedPosts = posts.map((post) => ({
+//       ...post.toJSON(),
+//       created_by: post.creator
+//         ? `${post.creator.user_id} - ${post.creator.name}`
+//         : "Không xác định",
+//       tags: post.tags,
+//       // Thêm tên category trực tiếp vào post và loại bỏ object category
+//       category_name: post.category ? post.category.category_name : null,
+//       // Xóa trường category khỏi post.toJSON() nếu cần
+//       category: undefined, // Dòng này sẽ xóa object category
+//     }));
+
+//     res.status(200).json({
+//       message: "Lấy danh sách dịch vụ thành công",
+//       data: formattedPosts,
+//     });
+//   } catch (error) {
+//     res.status(500).json({
+//       message: "Lỗi server",
+//       error: error.message,
+//     });
+//   }
+// };
+
 exports.searchPost = async (req, res) => {
   try {
     const { category_id } = req.body;
     const { Op } = require("sequelize");
+
     let whereClause = {};
-    if (Array.isArray(category_id)) {
-      whereClause.category_id = {
-        [Op.in]: category_id, // ví dụ: [1, 2]
-      };
-    } else if (category_id !== undefined) {
-      whereClause.category_id = category_id; // ví dụ: 1
+
+    if (category_id !== undefined) {
+      // TRƯỜNG HỢP CÓ TRUYỀN CATEGORY_ID
+      if (Array.isArray(category_id)) {
+        whereClause.category_id = { [Op.in]: category_id };
+      } else {
+        whereClause.category_id = category_id;
+      }
+    } else {
+      // TRƯỜNG HỢP KHÔNG TRUYỀN: Loại trừ ID 13
+      whereClause.category_id = { [Op.ne]: 13 }; // ne là Not Equal
     }
+
     const posts = await Post.findAll({
       where: whereClause,
       order: [["post_id", "DESC"]],
       include: [
+        { model: User, as: "creator", attributes: ["user_id", "name"] },
         {
-          model: User,
-          as: "creator",
-          attributes: ["user_id", "name"],
+          model: Tag,
+          as: "tags",
+          attributes: ["tag_id", "tag_name"],
+          through: { attributes: [] },
         },
         {
-          model: Tag, // Tên model Tag
-          as: "tags", // Alias bạn đã định nghĩa trong models/index.js
-          attributes: ["tag_id", "tag_name"], // Các trường bạn muốn lấy từ bảng tag
-          through: { attributes: [] }, // Tùy chọn để không lấy các trường từ bảng nối
-        },
-        {
-          model: Category, // Tên model của bảng Category
-          as: "category", // Alias cho mối quan hệ này (ví dụ: 'category')
-          attributes: ["category_id", "category_name"], // Các trường bạn muốn lấy
+          model: Category,
+          as: "category",
+          attributes: ["category_id", "category_name"],
         },
       ],
     });
 
-    // Kiểm tra và định dạng lại dữ liệu nếu cần
-    const formattedPosts = posts.map((post) => ({
-      ...post.toJSON(),
-      created_by: post.creator
-        ? `${post.creator.user_id} - ${post.creator.name}`
-        : "Không xác định",
-      tags: post.tags,
-      // Thêm tên category trực tiếp vào post và loại bỏ object category
-      category_name: post.category ? post.category.category_name : null,
-      // Xóa trường category khỏi post.toJSON() nếu cần
-      category: undefined, // Dòng này sẽ xóa object category
-    }));
+    // Formatting data...
+    const formattedPosts = posts.map((post) => {
+      const postData = post.toJSON();
+      return {
+        ...postData,
+        created_by: postData.creator
+          ? `${postData.creator.user_id} - ${postData.creator.name}`
+          : "Không xác định",
+        category_name: postData.category
+          ? postData.category.category_name
+          : null,
+        category: undefined, // Ẩn object category lồng bên trong
+      };
+    });
 
     res.status(200).json({
-      message: "Lấy danh sách dịch vụ thành công",
+      message: "Lấy danh sách bài viết thành công",
       data: formattedPosts,
     });
   } catch (error) {
