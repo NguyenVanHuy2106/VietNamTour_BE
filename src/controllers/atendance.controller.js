@@ -3,13 +3,9 @@ const { Op } = require("sequelize"); // Nhớ import Op để dùng toán tử s
 
 exports.submitAttendance = async (req, res) => {
   try {
-    // 1. Lấy dữ liệu từ Body và Token
     const { user_id, deviceId } = req.body;
-
-    // Thử lấy ID từ token (Hỗ trợ cả 2 cách đặt tên biến để tránh undefined)
     const idFromToken = req.user.user_id || req.user.id;
 
-    // 2. Bảo mật: Đối soát ID gửi lên và ID trong Token
     if (!idFromToken || user_id != idFromToken) {
       return res.status(403).json({
         success: false,
@@ -17,34 +13,41 @@ exports.submitAttendance = async (req, res) => {
       });
     }
 
-    // 3. Xử lý IP (Hỗ trợ cả Localhost ::1 và IP thật)
+    // --- BƯỚC 3 & 4: XỬ LÝ IP (HỖ TRỢ CẢ IPV4 VÀ IPV6) ---
     let clientIp = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
-    if (clientIp.includes("::ffff:")) clientIp = clientIp.split(":").pop();
 
-    // 4. Lấy IP văn phòng từ DB
+    // Chuẩn hóa IP (Xử lý tiền tố IPv6 lai IPv4 ::ffff:)
+    if (clientIp.includes("::ffff:")) {
+      clientIp = clientIp.split(":").pop();
+    }
+
+    // Lấy danh sách IP hợp lệ từ DB (Nên để dạng mảng hoặc chuỗi cách nhau bởi dấu phẩy)
     const officeIpConfig = await Config.findByPk("OFFICE_IP");
-    const validIp = officeIpConfig
-      ? officeIpConfig.configValue
-      : "113.173.242.173";
 
-    const isLocal = clientIp === "::1" || clientIp === "127.0.0.1";
+    // Ở đây mình tạo mảng chứa các IP hợp lệ (Cả IPv4 và IPv6 bạn vừa thấy)
+    const validIps = officeIpConfig
+      ? officeIpConfig.configValue.split(",").map((ip) => ip.trim())
+      : ["113.173.242.173", "2001:ee0:4fcf:8510:6dd7:2e:ebc:8ffc"]; // Thêm cái IPv6 bạn vừa bị báo lỗi vào đây
 
-    if (!isLocal && clientIp !== validIp) {
+    const isLocal =
+      clientIp === "::1" || clientIp === "127.0.0.1" || clientIp === "::";
+
+    // Kiểm tra xem IP hiện tại có nằm trong danh sách cho phép không
+    if (!isLocal && !validIps.includes(clientIp)) {
       return res.status(403).json({
         success: false,
-        message: `Sai mạng WiFi! (IP: ${clientIp}). Vui lòng dùng WiFi văn phòng Việt Nam Tour.`,
+        message: `Sai mạng WiFi! (Hệ thống nhận diện IP: ${clientIp}). Vui lòng dùng WiFi văn phòng Việt Nam Tour.`,
       });
     }
 
-    // 5. Kiểm tra thiết bị (Chống chấm công hộ)
+    // --- CÁC BƯỚC CÒN LẠI GIỮ NGUYÊN ---
     const user = await User.findByPk(user_id);
     if (!user)
       return res.status(404).json({ message: "Nhân viên không tồn tại." });
 
-    // ADMIN thì có thể bỏ qua check máy, STAFF thì bắt buộc check deviceId
     if (user.role !== "ADMIN") {
       if (!user.device_id) {
-        await user.update({ device_id: deviceId }); // Lưu máy lần đầu
+        await user.update({ device_id: deviceId });
       } else if (user.device_id !== deviceId) {
         return res.status(403).json({
           success: false,
@@ -53,28 +56,24 @@ exports.submitAttendance = async (req, res) => {
       }
     }
 
-    // 6. Logic CHỈ CHECK-IN (Một lần duy nhất mỗi ngày)
-    const today = new Date().toISOString().split("T")[0];
     const now = new Date();
+    const today = now.toISOString().split("T")[0];
     const deadline = new Date(now);
     deadline.setHours(9, 0, 0, 0);
 
     const attendanceStatus = now > deadline ? "LATE" : "ON_TIME";
 
-    // Tìm xem hôm nay nhân viên này đã chấm công chưa
     let record = await Attendance.findOne({
       where: { userId: user_id, workDate: today },
     });
 
     if (record) {
-      // ĐÃ CÓ BẢN GHI -> CHẶN LẠI
       return res.status(400).json({
         success: false,
         message: `Hôm nay bạn đã chấm công rồi! (Lúc: ${new Date(record.checkIn).toLocaleTimeString("vi-VN")})`,
       });
     }
 
-    // CHƯA CÓ BẢN GHI -> TẠO MỚI (CHECK-IN)
     record = await Attendance.create({
       userId: user_id,
       workDate: today,
@@ -86,7 +85,7 @@ exports.submitAttendance = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Check-in thành công! Chúc bạn ngày mới tốt lành.",
+      message: `Check-in thành công! (${attendanceStatus === "LATE" ? "Bạn đã đi muộn" : "Đúng giờ"})`,
       data: record,
     });
   } catch (error) {
