@@ -58,10 +58,24 @@ exports.submitAttendance = async (req, res) => {
 
     const now = new Date();
     const today = now.toISOString().split("T")[0];
-    const deadline = new Date(now);
-    deadline.setHours(9, 0, 0, 0);
 
-    const attendanceStatus = now > deadline ? "LATE" : "ON_TIME";
+    // Tạo mốc 9h sáng theo giờ Việt Nam
+    // Chúng ta lấy giờ hiện tại, chuyển sang múi giờ VN để so sánh
+    const currentTimeVN = now.toLocaleTimeString("en-GB", {
+      timeZone: "Asia/Ho_Chi_Minh",
+      hour12: false,
+    });
+
+    // currentTimeVN sẽ có dạng "15:54:25"
+    // So sánh chuỗi hoặc lấy số giờ để check
+    const currentHour = parseInt(currentTimeVN.split(":")[0]);
+    const currentMinute = parseInt(currentTimeVN.split(":")[1]);
+
+    // Nếu Giờ > 9 hoặc (Giờ == 9 và Phút > 0) => LATE
+    const attendanceStatus =
+      currentHour > 9 || (currentHour === 9 && currentMinute > 0)
+        ? "LATE"
+        : "ON_TIME";
 
     let record = await Attendance.findOne({
       where: { userId: user_id, workDate: today },
