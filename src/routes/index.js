@@ -16,6 +16,7 @@ const postRoutes = require("./post.routes");
 const imgCatRoutes = require("./imgCategory.routes");
 const imageRoutes = require("./image.routes");
 const sitemapRoutes = require("./sitemap.routes");
+const attendanceRoutes = require("./attendance.routes");
 
 module.exports = [
   userRoutes,
@@ -36,4 +37,5 @@ module.exports = [
   imgCatRoutes,
   imageRoutes,
   sitemapRoutes,
+  attendanceRoutes,
 ];

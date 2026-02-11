@@ -140,9 +140,9 @@ exports.logIn = async (req, res) => {
 
     // Tạo token JWT (hết hạn sau 24 giờ)
     const token = jwt.sign(
-      { user_id: user.id, role: user.role },
+      { user_id: user.user_id || user.id, role: user.role },
       "huyhoang123", //
-      { expiresIn: "2h" }
+      { expiresIn: "2h" },
     );
 
     res.status(200).json({

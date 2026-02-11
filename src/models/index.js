@@ -3,8 +3,10 @@
 const Post = require("./posts.model");
 const Tag = require("./tags.model");
 const PostTag = require("./postsTag.model");
-
+const Attendance = require("./attendance.model");
 const Category = require("./categories.model");
+const User = require("./user.model"); // Giả sử model User của bạn ở đây
+const Config = require("./configs.model");
 
 // Một bài viết có nhiều tags, thông qua bảng trung gian PostTag
 Post.belongsToMany(Tag, {
@@ -28,5 +30,9 @@ Post.belongsTo(Category, {
   as: "category",
 });
 
+// Quan hệ 1 nhân viên - nhiều lần chấm công
+User.hasMany(Attendance, { foreignKey: "user_id", as: "attendances" });
+Attendance.belongsTo(User, { foreignKey: "user_id", as: "user" });
+
 // Xuất các model đã được định nghĩa mối quan hệ
-module.exports = { Post, Tag, PostTag, Category };
+module.exports = { Post, Tag, PostTag, Category, User, Attendance, Config };

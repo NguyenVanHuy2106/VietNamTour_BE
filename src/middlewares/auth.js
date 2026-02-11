@@ -11,6 +11,7 @@ exports.verifyToken = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token.replace("Bearer ", ""), "huyhoang123");
+    //console.log("RUỘT TOKEN GIẢI MÃ ĐƯỢC:", decoded); // <--- THÊM DÒNG NÀY
     req.user = decoded; // Lưu thông tin user vào request
     next();
   } catch (error) {
