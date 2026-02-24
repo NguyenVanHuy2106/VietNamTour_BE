@@ -13,7 +13,7 @@ exports.submitAttendance = async (req, res) => {
       });
     }
 
-    // --- BƯỚC 3 & 4: XỬ LÝ IP (HỖ TRỢ SONG SONG IPV4 VÀ IPV6) ---
+    // --- BƯỚC 3 & 4: XỬ LÝ IP (HỖ TRỢ CẢ IPV4 VÀ DẢI IPV6) ---
     let clientIp = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
 
     // Chuẩn hóa IP (Xử lý tiền tố IPv6 lai IPv4 ::ffff:)
@@ -21,27 +21,23 @@ exports.submitAttendance = async (req, res) => {
       clientIp = clientIp.split(":").pop();
     }
 
-    // 1. Lấy đồng thời cả 2 cấu hình từ Database
     const [configV6, configV4] = await Promise.all([
       Config.findByPk("OFFICE_IP"),
       Config.findByPk("IP_V4"),
     ]);
 
-    // 2. Gộp danh sách IP hợp lệ từ cả 2 key
     let validIps = [];
-
-    if (configV6 && configV6.configValue) {
+    if (configV6?.configValue) {
       validIps = validIps.concat(
         configV6.configValue.split(",").map((ip) => ip.trim()),
       );
     }
-    if (configV4 && configV4.configValue) {
+    if (configV4?.configValue) {
       validIps = validIps.concat(
         configV4.configValue.split(",").map((ip) => ip.trim()),
       );
     }
 
-    // Dự phòng (Fallback) nếu DB trống - dùng chính các IP bạn đã cung cấp
     if (validIps.length === 0) {
       validIps = ["113.173.242.173", "2001:ee0:4fcf:8510:6dd7:2e:ebc:8ffc"];
     }
@@ -49,8 +45,19 @@ exports.submitAttendance = async (req, res) => {
     const isLocal =
       clientIp === "::1" || clientIp === "127.0.0.1" || clientIp === "::";
 
-    // 3. Kiểm tra: Chỉ cần khớp 1 trong các IP trong danh sách tổng là OK
-    if (!isLocal && !validIps.includes(clientIp)) {
+    // --- LOGIC KIỂM TRA THÔNG MINH ---
+    const isIpValid = validIps.some((validIp) => {
+      // Trường hợp cả 2 đều là IPv6: So sánh 4 nhóm đầu (64-bit prefix)
+      if (validIp.includes(":") && clientIp.includes(":")) {
+        const validPrefix = validIp.split(":").slice(0, 4).join(":");
+        const clientPrefix = clientIp.split(":").slice(0, 4).join(":");
+        return validPrefix === clientPrefix;
+      }
+      // Trường hợp IPv4: So khớp chính xác
+      return validIp === clientIp;
+    });
+
+    if (!isLocal && !isIpValid) {
       return res.status(403).json({
         success: false,
         message: `Sai mạng WiFi! (Hệ thống nhận diện IP: ${clientIp}). Vui lòng dùng WiFi văn phòng Việt Nam Tour.`,
@@ -75,7 +82,6 @@ exports.submitAttendance = async (req, res) => {
 
     const now = new Date();
     const today = now.toISOString().split("T")[0];
-
     const currentTimeVN = now.toLocaleTimeString("en-GB", {
       timeZone: "Asia/Ho_Chi_Minh",
       hour12: false,
