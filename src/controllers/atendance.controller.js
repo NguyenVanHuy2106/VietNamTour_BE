@@ -13,7 +13,7 @@ exports.submitAttendance = async (req, res) => {
       });
     }
 
-    // --- BƯỚC 3 & 4: XỬ LÝ IP (HỖ TRỢ CẢ IPV4 VÀ IPV6) ---
+    // --- BƯỚC 3 & 4: XỬ LÝ IP (HỖ TRỢ SONG SONG IPV4 VÀ IPV6) ---
     let clientIp = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
 
     // Chuẩn hóa IP (Xử lý tiền tố IPv6 lai IPv4 ::ffff:)
@@ -21,18 +21,35 @@ exports.submitAttendance = async (req, res) => {
       clientIp = clientIp.split(":").pop();
     }
 
-    // Lấy danh sách IP hợp lệ từ DB (Nên để dạng mảng hoặc chuỗi cách nhau bởi dấu phẩy)
-    const officeIpConfig = await Config.findByPk("OFFICE_IP");
+    // 1. Lấy đồng thời cả 2 cấu hình từ Database
+    const [configV6, configV4] = await Promise.all([
+      Config.findByPk("OFFICE_IP"),
+      Config.findByPk("IP_V4"),
+    ]);
 
-    // Ở đây mình tạo mảng chứa các IP hợp lệ (Cả IPv4 và IPv6 bạn vừa thấy)
-    const validIps = officeIpConfig
-      ? officeIpConfig.configValue.split(",").map((ip) => ip.trim())
-      : ["113.173.242.173", "2001:ee0:4fcf:8510:6dd7:2e:ebc:8ffc"]; // Thêm cái IPv6 bạn vừa bị báo lỗi vào đây
+    // 2. Gộp danh sách IP hợp lệ từ cả 2 key
+    let validIps = [];
+
+    if (configV6 && configV6.configValue) {
+      validIps = validIps.concat(
+        configV6.configValue.split(",").map((ip) => ip.trim()),
+      );
+    }
+    if (configV4 && configV4.configValue) {
+      validIps = validIps.concat(
+        configV4.configValue.split(",").map((ip) => ip.trim()),
+      );
+    }
+
+    // Dự phòng (Fallback) nếu DB trống - dùng chính các IP bạn đã cung cấp
+    if (validIps.length === 0) {
+      validIps = ["113.173.242.173", "2001:ee0:4fcf:8510:6dd7:2e:ebc:8ffc"];
+    }
 
     const isLocal =
       clientIp === "::1" || clientIp === "127.0.0.1" || clientIp === "::";
 
-    // Kiểm tra xem IP hiện tại có nằm trong danh sách cho phép không
+    // 3. Kiểm tra: Chỉ cần khớp 1 trong các IP trong danh sách tổng là OK
     if (!isLocal && !validIps.includes(clientIp)) {
       return res.status(403).json({
         success: false,
@@ -59,19 +76,14 @@ exports.submitAttendance = async (req, res) => {
     const now = new Date();
     const today = now.toISOString().split("T")[0];
 
-    // Tạo mốc 9h sáng theo giờ Việt Nam
-    // Chúng ta lấy giờ hiện tại, chuyển sang múi giờ VN để so sánh
     const currentTimeVN = now.toLocaleTimeString("en-GB", {
       timeZone: "Asia/Ho_Chi_Minh",
       hour12: false,
     });
 
-    // currentTimeVN sẽ có dạng "15:54:25"
-    // So sánh chuỗi hoặc lấy số giờ để check
     const currentHour = parseInt(currentTimeVN.split(":")[0]);
     const currentMinute = parseInt(currentTimeVN.split(":")[1]);
 
-    // Nếu Giờ > 9 hoặc (Giờ == 9 và Phút > 0) => LATE
     const attendanceStatus =
       currentHour > 9 || (currentHour === 9 && currentMinute > 0)
         ? "LATE"
