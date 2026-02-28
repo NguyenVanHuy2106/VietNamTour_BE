@@ -1,5 +1,5 @@
 const { Attendance, Config, User } = require("../models");
-const { Op, fn, col } = require("sequelize");
+const { Op, fn, col, projection } = require("sequelize");
 exports.submitAttendance = async (req, res) => {
   try {
     const { user_id, deviceId } = req.body;
@@ -183,6 +183,7 @@ exports.getAttendanceHistory = async (req, res) => {
   try {
     let { fromDate, toDate, userId } = req.body;
 
+    // 1. Xử lý mặc định ngày tháng
     if (!fromDate || !toDate) {
       const today = new Date();
       const lastMonth = new Date();
@@ -191,18 +192,23 @@ exports.getAttendanceHistory = async (req, res) => {
       toDate = toDate || today.toISOString().split("T")[0];
     }
 
-    // Đảm bảo toDate bao phủ hết cả ngày (đến 23:59:59)
     const start = `${fromDate} 00:00:00`;
     const end = `${toDate} 23:59:59`;
 
-    const history = await Attendance.findAll({
-      where: {
-        userId: userId,
-        workDate: {
-          [Op.between]: [start, end],
-        },
+    // 2. Tạo đối tượng điều kiện WHERE
+    const whereConditions = {
+      workDate: {
+        [Op.between]: [start, end],
       },
-      // SỬ DỤNG TO_CHAR ĐỂ GIỮ NGUYÊN GIỜ VIỆT NAM TỪ DB
+    };
+
+    if (userId) {
+      whereConditions.userId = userId;
+    }
+
+    // 3. Truy vấn kèm theo Include để lấy tên nhân viên
+    const history = await Attendance.findAll({
+      where: whereConditions,
       attributes: [
         "id",
         "userId",
@@ -216,14 +222,33 @@ exports.getAttendanceHistory = async (req, res) => {
           "checkOut",
         ],
       ],
+      include: [
+        {
+          model: User, // Tên model User của bạn
+          attributes: ["name"], // Chỉ lấy cột fullName (hoặc 'name' tùy DB của bạn)
+          as: "user", // Alias nếu bạn có định nghĩa trong association
+        },
+      ],
       order: [["workDate", "DESC"]],
+    });
+
+    // 4. Format lại data trả về để "fullName" nằm cùng cấp (tùy chọn)
+    const formattedData = history.map((item) => {
+      const plainItem = item.get({ plain: true });
+      return {
+        ...plainItem,
+        fullName: plainItem.userId ? plainItem.user.name : "N/A", // Đưa fullName ra ngoài cho dễ dùng ở FE
+        user: undefined, // Xóa object lồng nhau nếu không cần
+      };
     });
 
     return res.status(200).json({
       success: true,
-      message: `Lấy lịch sử chấm công từ ${fromDate} đến ${toDate}`,
-      count: history.length,
-      data: history,
+      message: userId
+        ? `Lấy lịch sử chấm công nhân viên ${userId}`
+        : "Lấy lịch sử chấm công tất cả nhân viên",
+      count: formattedData.length,
+      data: formattedData,
     });
   } catch (error) {
     console.error("Lỗi lấy lịch sử chấm công:", error);
