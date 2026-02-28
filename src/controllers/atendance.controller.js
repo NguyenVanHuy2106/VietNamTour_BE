@@ -1,6 +1,5 @@
 const { Attendance, Config, User } = require("../models");
-const { Op } = require("sequelize"); // Nhớ import Op để dùng toán tử so sánh
-
+const { Op, fn, col } = require("sequelize");
 exports.submitAttendance = async (req, res) => {
   try {
     const { user_id, deviceId } = req.body;
@@ -128,48 +127,99 @@ exports.submitAttendance = async (req, res) => {
 
 exports.getUserAttendance = async (req, res) => {
   try {
-    // 1. Lấy dữ liệu từ Body (Vì Huy dùng POST)
     const { userId, month, year } = req.body;
-
-    // 2. Bảo mật: Đối soát ID gửi lên và ID trong Token
     const idFromToken = req.user.user_id || req.user.id;
+
     if (!idFromToken || userId != idFromToken) {
-      return res.status(403).json({
-        success: false,
-        message: "Bạn không có quyền xem lịch sử của người khác!",
-      });
+      return res
+        .status(403)
+        .json({ success: false, message: "Không có quyền!" });
     }
 
-    // 3. Xử lý thời gian: Mặc định là tháng/năm hiện tại nếu không truyền
     const now = new Date();
-    const targetMonth = month || now.getMonth() + 1; // 1 - 12
-    const targetYear = year || now.getFullYear();
+    const targetMonth = parseInt(month) || now.getMonth() + 1;
+    const targetYear = parseInt(year) || now.getFullYear();
 
-    // Tính ngày đầu tháng và cuối tháng
-    const startDate = new Date(targetYear, targetMonth - 1, 1);
-    const endDate = new Date(targetYear, targetMonth, 0); // Mẹo lấy ngày cuối tháng
+    const startDate = `${targetYear}-${String(targetMonth).padStart(2, "0")}-01 00:00:00`;
+    const lastDay = new Date(targetYear, targetMonth, 0).getDate();
+    const endDate = `${targetYear}-${String(targetMonth).padStart(2, "0")}-${lastDay} 23:59:59`;
 
-    // 4. Truy vấn lọc theo User và Khoảng ngày trong tháng
+    const history = await Attendance.findAll({
+      where: {
+        userId: userId,
+        workDate: { [Op.between]: [startDate, endDate] },
+      },
+      attributes: [
+        "id",
+        "userId",
+        "workDate",
+        "status",
+        "deviceIdUsed",
+        "ipAddress",
+        // Với Postgres, dùng TO_CHAR thay cho DATE_FORMAT
+        // Format 'YYYY-MM-DD"T"HH24:MI:SS' giúp giữ nguyên giờ 10:31:14
+        [fn("TO_CHAR", col("check_in"), 'YYYY-MM-DD"T"HH24:MI:SS'), "checkIn"],
+        [
+          fn("TO_CHAR", col("check_out"), 'YYYY-MM-DD"T"HH24:MI:SS'),
+          "checkOut",
+        ],
+      ],
+      order: [["workDate", "DESC"]],
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: history,
+    });
+  } catch (error) {
+    console.error("Lỗi:", error);
+    res.status(500).json({ success: false, message: "Lỗi hệ thống." });
+  }
+};
+
+// Đảm bảo import đúng. Nếu file model export kiểu 'module.exports = Attendance'
+
+exports.getAttendanceHistory = async (req, res) => {
+  try {
+    // 1. Lấy userId từ token (đã qua middleware verifyToken của bạn)
+
+    // 2. Lấy fromDate và toDate từ Body (POST)
+    let { fromDate, toDate, userId } = req.body;
+
+    // 3. Xử lý mặc định nếu client không gửi ngày (lấy 30 ngày gần nhất)
+    if (!fromDate || !toDate) {
+      const today = new Date();
+      const lastMonth = new Date();
+      lastMonth.setDate(today.getDate() - 30);
+
+      fromDate = fromDate || lastMonth.toISOString().split("T")[0];
+      toDate = toDate || today.toISOString().split("T")[0];
+    }
+
+    // 4. Truy vấn Database bằng Sequelize
     const history = await Attendance.findAll({
       where: {
         userId: userId,
         workDate: {
-          [Op.between]: [
-            startDate.toISOString().split("T")[0],
-            endDate.toISOString().split("T")[0],
-          ],
+          [Op.between]: [fromDate, toDate], // Lọc trong khoảng từ ngày ... đến ngày ...
         },
       },
       order: [["workDate", "DESC"]], // Ngày mới nhất lên đầu
     });
 
+    // 5. Trả về kết quả
     return res.status(200).json({
       success: true,
-      message: `Lấy lịch sử tháng ${targetMonth}/${targetYear} thành công.`,
+      message: `Lấy lịch sử chấm công từ ${fromDate} đến ${toDate}`,
+      count: history.length,
       data: history,
     });
   } catch (error) {
-    console.error("Lỗi lấy lịch sử:", error);
-    res.status(500).json({ success: false, message: "Lỗi hệ thống Backend." });
+    console.error("Lỗi lấy lịch sử chấm công:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Lỗi hệ thống khi truy xuất dữ liệu!",
+      error: error.message,
+    });
   }
 };
