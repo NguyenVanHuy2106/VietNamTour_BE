@@ -181,33 +181,44 @@ exports.getUserAttendance = async (req, res) => {
 
 exports.getAttendanceHistory = async (req, res) => {
   try {
-    // 1. Lấy userId từ token (đã qua middleware verifyToken của bạn)
-
-    // 2. Lấy fromDate và toDate từ Body (POST)
     let { fromDate, toDate, userId } = req.body;
 
-    // 3. Xử lý mặc định nếu client không gửi ngày (lấy 30 ngày gần nhất)
     if (!fromDate || !toDate) {
       const today = new Date();
       const lastMonth = new Date();
       lastMonth.setDate(today.getDate() - 30);
-
       fromDate = fromDate || lastMonth.toISOString().split("T")[0];
       toDate = toDate || today.toISOString().split("T")[0];
     }
 
-    // 4. Truy vấn Database bằng Sequelize
+    // Đảm bảo toDate bao phủ hết cả ngày (đến 23:59:59)
+    const start = `${fromDate} 00:00:00`;
+    const end = `${toDate} 23:59:59`;
+
     const history = await Attendance.findAll({
       where: {
         userId: userId,
         workDate: {
-          [Op.between]: [fromDate, toDate], // Lọc trong khoảng từ ngày ... đến ngày ...
+          [Op.between]: [start, end],
         },
       },
-      order: [["workDate", "DESC"]], // Ngày mới nhất lên đầu
+      // SỬ DỤNG TO_CHAR ĐỂ GIỮ NGUYÊN GIỜ VIỆT NAM TỪ DB
+      attributes: [
+        "id",
+        "userId",
+        "workDate",
+        "status",
+        "deviceIdUsed",
+        "ipAddress",
+        [fn("TO_CHAR", col("check_in"), 'YYYY-MM-DD"T"HH24:MI:SS'), "checkIn"],
+        [
+          fn("TO_CHAR", col("check_out"), 'YYYY-MM-DD"T"HH24:MI:SS'),
+          "checkOut",
+        ],
+      ],
+      order: [["workDate", "DESC"]],
     });
 
-    // 5. Trả về kết quả
     return res.status(200).json({
       success: true,
       message: `Lấy lịch sử chấm công từ ${fromDate} đến ${toDate}`,
@@ -219,7 +230,6 @@ exports.getAttendanceHistory = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Lỗi hệ thống khi truy xuất dữ liệu!",
-      error: error.message,
     });
   }
 };
