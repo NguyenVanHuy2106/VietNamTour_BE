@@ -6,6 +6,7 @@ const {
   submitAttendance,
   getUserAttendance,
   getAttendanceHistory,
+  submitCheckOut,
 } = require("../controllers/atendance.controller");
 
 // Route thêm user
@@ -13,5 +14,6 @@ const {
 router.post("/api/submitAtendance", verifyToken, submitAttendance);
 router.post("/api/getUserAtendance", verifyToken, getUserAttendance);
 router.post("/api/getAttendanceHistory", verifyToken, getAttendanceHistory);
+router.post("/api/submitCheckout", verifyToken, submitCheckOut);
 
 module.exports = router;

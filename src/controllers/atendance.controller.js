@@ -258,3 +258,109 @@ exports.getAttendanceHistory = async (req, res) => {
     });
   }
 };
+
+exports.submitCheckOut = async (req, res) => {
+  try {
+    const { user_id } = req.body;
+    const idFromToken = req.user.user_id || req.user.id;
+
+    // 1. KIỂM TRA ĐỊNH DANH
+    if (!idFromToken || user_id != idFromToken) {
+      return res.status(403).json({
+        success: false,
+        message: "Dữ liệu định danh không khớp! Vui lòng đăng nhập lại.",
+      });
+    }
+
+    // 2. XỬ LÝ IP (Tương tự check-in để đảm bảo check-out tại văn phòng)
+    let clientIp = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+    if (clientIp.includes("::ffff:")) clientIp = clientIp.split(":").pop();
+
+    const [configV6, configV4] = await Promise.all([
+      Config.findByPk("OFFICE_IP"),
+      Config.findByPk("IP_V4"),
+    ]);
+
+    let validIps = [];
+    if (configV6?.configValue)
+      validIps = validIps.concat(
+        configV6.configValue.split(",").map((ip) => ip.trim()),
+      );
+    if (configV4?.configValue)
+      validIps = validIps.concat(
+        configV4.configValue.split(",").map((ip) => ip.trim()),
+      );
+
+    if (validIps.length === 0) {
+      validIps = ["113.173.242.173", "2001:ee0:4fcf:8510:6dd7:2e:ebc:8ffc"];
+    }
+
+    const isLocal =
+      clientIp === "::1" || clientIp === "127.0.0.1" || clientIp === "::";
+    const isIpValid = validIps.some((validIp) => {
+      if (validIp.includes(":") && clientIp.includes(":")) {
+        return (
+          validIp.split(":").slice(0, 4).join(":") ===
+          clientIp.split(":").slice(0, 4).join(":")
+        );
+      }
+      return validIp === clientIp;
+    });
+
+    if (!isLocal && !isIpValid) {
+      return res.status(403).json({
+        success: false,
+        message: `Sai mạng WiFi! Vui lòng dùng WiFi văn phòng để Check-out.`,
+      });
+    }
+
+    // 4. LOGIC CHECK-OUT
+    const now = new Date();
+    const today = now.toISOString().split("T")[0];
+
+    // Tìm bản ghi check-in của ngày hôm nay
+    let record = await Attendance.findOne({
+      where: { userId: user_id, workDate: today },
+    });
+
+    if (!record) {
+      return res.status(400).json({
+        success: false,
+        message: "Bạn chưa Check-in hôm nay, không thể Check-out!",
+      });
+    }
+
+    if (record.checkOut) {
+      return res.status(400).json({
+        success: false,
+        message: `Bạn đã Check-out rồi! (Lúc: ${new Date(record.checkOut).toLocaleTimeString("vi-VN")})`,
+      });
+    }
+
+    // Cập nhật giờ ra và tính toán trạng thái (nếu cần)
+    // Ví dụ: Nếu check-out trước 17:00 là về sớm (EARLY_LEAVE)
+    const currentTimeVN = now.toLocaleTimeString("en-GB", {
+      timeZone: "Asia/Ho_Chi_Minh",
+      hour12: false,
+    });
+    const currentHour = parseInt(currentTimeVN.split(":")[0]);
+
+    // Giả sử giờ về chuẩn là 17h
+    const isEarly = currentHour < 17;
+
+    await record.update({
+      checkOut: now,
+      // Có thể thêm field ghi chú nếu về sớm
+      // note: isEarly ? "Về sớm hơn quy định" : "Về đúng giờ"
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `Check-out thành công! ${isEarly ? "Bạn về hơi sớm nhé." : "Hẹn gặp lại bạn ngày mai!"}`,
+      data: record,
+    });
+  } catch (error) {
+    console.error("Lỗi Check-out Controller:", error);
+    res.status(500).json({ success: false, message: "Lỗi hệ thống Backend." });
+  }
+};
