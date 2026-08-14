@@ -7,6 +7,9 @@ const Attendance = require("./attendance.model");
 const Category = require("./categories.model");
 const User = require("./user.model"); // Giả sử model User của bạn ở đây
 const Config = require("./configs.model");
+const InvoiceTour = require("./invoiceTour.model");
+const InvoiceTourService = require("./invoiceTourService.model");
+const InvoiceServiceInvoice = require("./invoiceServiceInvoice.model");
 
 // Một bài viết có nhiều tags, thông qua bảng trung gian PostTag
 Post.belongsToMany(Tag, {
@@ -34,5 +37,43 @@ Post.belongsTo(Category, {
 User.hasMany(Attendance, { foreignKey: "user_id", as: "attendances" });
 Attendance.belongsTo(User, { foreignKey: "user_id", as: "user" });
 
+// ================================
+// ĐỐI SOÁT HÓA ĐƠN TOUR
+// ================================
+
+// 1 tour có nhiều dịch vụ
+InvoiceTour.hasMany(InvoiceTourService, {
+  foreignKey: "tour_id",
+  as: "services",
+});
+
+InvoiceTourService.belongsTo(InvoiceTour, {
+  foreignKey: "tour_id",
+  as: "tour",
+});
+
+// 1 dịch vụ có nhiều hóa đơn
+InvoiceTourService.hasMany(InvoiceServiceInvoice, {
+  foreignKey: "service_id",
+  as: "invoices",
+});
+
+InvoiceServiceInvoice.belongsTo(InvoiceTourService, {
+  foreignKey: "service_id",
+  as: "service",
+});
+
 // Xuất các model đã được định nghĩa mối quan hệ
-module.exports = { Post, Tag, PostTag, Category, User, Attendance, Config };
+module.exports = {
+  Post,
+  Tag,
+  PostTag,
+  Category,
+  User,
+  Attendance,
+  Config,
+
+  InvoiceTour,
+  InvoiceTourService,
+  InvoiceServiceInvoice,
+};

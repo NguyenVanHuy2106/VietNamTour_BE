@@ -17,6 +17,7 @@ const imgCatRoutes = require("./imgCategory.routes");
 const imageRoutes = require("./image.routes");
 const sitemapRoutes = require("./sitemap.routes");
 const attendanceRoutes = require("./attendance.routes");
+const invoiceTourRoutes = require("./invoiceTour.routes");
 
 module.exports = [
   userRoutes,
@@ -38,4 +39,5 @@ module.exports = [
   imageRoutes,
   sitemapRoutes,
   attendanceRoutes,
+  invoiceTourRoutes,
 ];
