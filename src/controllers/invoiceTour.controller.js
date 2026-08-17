@@ -241,21 +241,29 @@ exports.getTourSummary = async (req, res) => {
     }
 
     let totalServiceAmount = 0;
-    let totalRequiredInvoice = 0;
+
+    // Không cộng required_invoice_amount của service
+    // để tính tổng cần lấy của tour nữa
     let totalInvoiceReceived = 0;
 
-    const services = tour.services.map((service) => {
+    const services = (tour.services || []).map((service) => {
       const serviceAmount = Number(service.service_amount) || 0;
 
       const requiredInvoiceAmount =
         Number(service.required_invoice_amount) || 0;
 
+      // Tổng hóa đơn đã lấy của riêng dịch vụ này
       const invoicedAmount = (service.invoices || []).reduce(
         (sum, invoice) => sum + (Number(invoice.invoice_amount) || 0),
         0,
       );
 
+      // Còn thiếu của RIÊNG DỊCH VỤ
       const missingAmount = Math.max(requiredInvoiceAmount - invoicedAmount, 0);
+
+      // ========================================
+      // TRẠNG THÁI RIÊNG TỪNG DỊCH VỤ
+      // ========================================
 
       let status = "NOT_INVOICED";
 
@@ -270,8 +278,13 @@ exports.getTourSummary = async (req, res) => {
         status = "COMPLETED";
       }
 
+      // ========================================
+      // TỔNG TOUR
+      // ========================================
+
       totalServiceAmount += serviceAmount;
-      totalRequiredInvoice += requiredInvoiceAmount;
+
+      // Chỉ cộng số hóa đơn thực tế đã lấy
       totalInvoiceReceived += invoicedAmount;
 
       return {
@@ -281,8 +294,12 @@ exports.getTourSummary = async (req, res) => {
         supplier_name: service.supplier_name,
 
         service_amount: serviceAmount,
+
+        // Vẫn giữ số cần lấy riêng của service
         required_invoice_amount: requiredInvoiceAmount,
+
         invoiced_amount: invoicedAmount,
+
         missing_amount: missingAmount,
 
         status,
@@ -290,6 +307,20 @@ exports.getTourSummary = async (req, res) => {
         invoices: service.invoices,
       };
     });
+
+    // ========================================
+    // RULE MỚI:
+    // CẦN LẤY HÓA ĐƠN TOÀN TOUR
+    // = SỐ TIỀN XUẤT CHO KHÁCH
+    // ========================================
+
+    const outputAmount = Number(tour.output_amount) || 0;
+
+    const totalRequiredInvoice = outputAmount;
+
+    // ========================================
+    // CÒN THIẾU TOÀN TOUR
+    // ========================================
 
     const totalMissingInvoice = Math.max(
       totalRequiredInvoice - totalInvoiceReceived,
@@ -307,14 +338,22 @@ exports.getTourSummary = async (req, res) => {
         departure_date: tour.departure_date,
         return_date: tour.return_date,
 
-        output_amount: Number(tour.output_amount) || 0,
+        // Số xuất khách
+        output_amount: outputAmount,
 
+        // Tổng chi phí dịch vụ
         total_service_amount: totalServiceAmount,
 
+        // ==================================
+        // RULE MỚI
+        // = output_amount
+        // ==================================
         total_required_invoice: totalRequiredInvoice,
 
+        // Tổng hóa đơn đã lấy
         total_invoice_received: totalInvoiceReceived,
 
+        // Còn thiếu
         total_missing_invoice: totalMissingInvoice,
 
         services,
