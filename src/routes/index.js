@@ -18,6 +18,7 @@ const imageRoutes = require("./image.routes");
 const sitemapRoutes = require("./sitemap.routes");
 const attendanceRoutes = require("./attendance.routes");
 const invoiceTourRoutes = require("./invoiceTour.routes");
+const contractRoutes = require("./contract.routes");
 
 module.exports = [
   userRoutes,
@@ -40,4 +41,5 @@ module.exports = [
   sitemapRoutes,
   attendanceRoutes,
   invoiceTourRoutes,
+  contractRoutes,
 ];

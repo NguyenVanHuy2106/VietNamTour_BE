@@ -11,6 +11,15 @@ const InvoiceTour = require("./invoiceTour.model");
 const InvoiceTourService = require("./invoiceTourService.model");
 const InvoiceServiceInvoice = require("./invoiceServiceInvoice.model");
 
+const Contract = require("./contract.model");
+const ContractParty = require("./contractParty.model");
+const ContractRepresentative = require("./contractRepresentative.model");
+const ContractContent = require("./contractContent.model");
+const ContractDeparture = require("./contractDeparture.model");
+const ContractPrice = require("./contractPrice.model");
+const ContractAdvance = require("./contractAdvance.model");
+const ContractLegalBasis = require("./contractLegalBasis.model");
+
 // Một bài viết có nhiều tags, thông qua bảng trung gian PostTag
 Post.belongsToMany(Tag, {
   through: PostTag,
@@ -63,6 +72,90 @@ InvoiceServiceInvoice.belongsTo(InvoiceTourService, {
   as: "service",
 });
 
+// 1. CONTRACT - PARTIES
+// Một hợp đồng có nhiều bên tham gia
+// Thông thường:
+// party_type = 1: Bên A - Khách hàng
+// party_type = 2: Bên B - Công ty
+// -----------------------------------------------------
+
+Contract.hasMany(ContractParty, {
+  foreignKey: "contract_id",
+  as: "parties",
+  onDelete: "CASCADE",
+});
+
+ContractParty.belongsTo(Contract, {
+  foreignKey: "contract_id",
+  as: "contract",
+});
+
+Contract.hasMany(ContractRepresentative, {
+  foreignKey: "contract_id",
+  as: "representatives",
+  onDelete: "CASCADE",
+});
+
+ContractRepresentative.belongsTo(Contract, {
+  foreignKey: "contract_id",
+  as: "contract",
+});
+
+Contract.hasOne(ContractContent, {
+  foreignKey: "contract_id",
+  as: "contract_content",
+  onDelete: "CASCADE",
+});
+
+ContractContent.belongsTo(Contract, {
+  foreignKey: "contract_id",
+  as: "contract",
+});
+
+Contract.hasMany(ContractDeparture, {
+  foreignKey: "contract_id",
+  as: "departures",
+  onDelete: "CASCADE",
+});
+
+ContractDeparture.belongsTo(Contract, {
+  foreignKey: "contract_id",
+  as: "contract",
+});
+
+Contract.hasMany(ContractPrice, {
+  foreignKey: "contract_id",
+  as: "price_items",
+  onDelete: "CASCADE",
+});
+
+ContractPrice.belongsTo(Contract, {
+  foreignKey: "contract_id",
+  as: "contract",
+});
+
+Contract.hasOne(ContractAdvance, {
+  foreignKey: "contract_id",
+  as: "advance",
+  onDelete: "CASCADE",
+});
+
+ContractAdvance.belongsTo(Contract, {
+  foreignKey: "contract_id",
+  as: "contract",
+});
+
+Contract.hasMany(ContractLegalBasis, {
+  foreignKey: "contract_id",
+  as: "legal_bases",
+  onDelete: "CASCADE",
+});
+
+ContractLegalBasis.belongsTo(Contract, {
+  foreignKey: "contract_id",
+  as: "contract",
+});
+
 // Xuất các model đã được định nghĩa mối quan hệ
 module.exports = {
   Post,
@@ -72,8 +165,15 @@ module.exports = {
   User,
   Attendance,
   Config,
-
   InvoiceTour,
   InvoiceTourService,
   InvoiceServiceInvoice,
+  Contract,
+  ContractParty,
+  ContractRepresentative,
+  ContractContent,
+  ContractDeparture,
+  ContractPrice,
+  ContractAdvance,
+  ContractLegalBasis,
 };
