@@ -682,6 +682,9 @@ const buildContractHtml = (contract) => {
 
       ${buildInfoRow("Địa chỉ", data.company.address)}
 
+      ${buildInfoRow("Liên hệ", data.company.company_contact_address)}
+
+
 
       ${buildInfoRow("Điện thoại", data.company.phone)}
 
@@ -2763,6 +2766,7 @@ const generateContractWord = async (contract) => {
 
   [
     wordPartyInfo("Địa chỉ", data.company.address),
+    wordPartyInfo("Liên hệ", data.company.company_contact_address),
 
     wordPartyInfo("Điện thoại", data.company.phone),
 

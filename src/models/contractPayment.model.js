@@ -1,12 +1,10 @@
-// File: src/models/contractParty.model.js
-
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
-const ContractParty = sequelize.define(
-  "vn_contracts_parties",
+const ContractPayment = sequelize.define(
+  "vn_contract_payment",
   {
-    party_id: {
+    payment_id: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
@@ -17,57 +15,60 @@ const ContractParty = sequelize.define(
       allowNull: false,
     },
 
-    // 1. Bên A - Khách hàng
-    // 2. Bên B - Công ty
-    party_type: {
-      type: DataTypes.INTEGER,
+    payment_type: {
+      type: DataTypes.STRING(30),
       allowNull: false,
     },
 
-    company_name: {
-      type: DataTypes.STRING(1000),
+    payment_date: {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+    },
+
+    amount: {
+      type: DataTypes.FLOAT,
       allowNull: false,
+      defaultValue: 0,
     },
 
-    tax_code: {
+    payment_method: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+    },
+
+    reference_no: {
       type: DataTypes.STRING(100),
+      allowNull: true,
     },
 
-    budget_code: {
-      type: DataTypes.STRING(100),
-    },
-
-    address: {
-      type: DataTypes.STRING(2000),
-    },
-    // Địa chỉ liên hệ
-    company_contact_address: {
+    note: {
       type: DataTypes.TEXT,
       allowNull: true,
     },
 
-    phone: {
-      type: DataTypes.STRING(100),
-    },
-
-    bank_account: {
-      type: DataTypes.STRING(1000),
+    status: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 1,
     },
 
     created_by: {
       type: DataTypes.INTEGER,
+      allowNull: true,
     },
 
     created_at: {
       type: DataTypes.DATEONLY,
+      allowNull: false,
       defaultValue: DataTypes.NOW,
     },
   },
   {
-    tableName: "vn_contracts_parties",
+    tableName: "vn_contract_payments",
     schema: "vntour",
     timestamps: false,
+    freezeTableName: true,
   },
 );
 
-module.exports = ContractParty;
+module.exports = ContractPayment;

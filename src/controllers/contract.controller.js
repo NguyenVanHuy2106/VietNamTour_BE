@@ -546,6 +546,10 @@ exports.createContract = async (req, res) => {
     // BÊN B - CÔNG TY
     // ========================================
 
+    // ========================================
+    // BÊN B - CÔNG TY
+    // ========================================
+
     if (company_profile) {
       await ContractParty.create(
         {
@@ -560,6 +564,10 @@ exports.createContract = async (req, res) => {
           budget_code: company_profile.budget_code || null,
 
           address: company_profile.address || null,
+
+          // ĐỊA CHỈ LIÊN HỆ
+          company_contact_address:
+            company_profile.company_contact_address || null,
 
           phone: company_profile.phone || null,
 
@@ -1286,6 +1294,10 @@ exports.updateContract = async (req, res) => {
           budget_code: company_profile.budget_code,
 
           address: company_profile.address,
+
+          // ĐỊA CHỈ LIÊN HỆ
+          company_contact_address:
+            company_profile.company_contact_address || null,
 
           phone: company_profile.phone,
 
