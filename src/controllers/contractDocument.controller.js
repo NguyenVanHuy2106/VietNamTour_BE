@@ -16,6 +16,7 @@ const {
   ContractForm08a,
   ContractForm08aItem,
 } = require("../models");
+const User = require("../models/user.model");
 
 const sequelize = require("../config/database");
 const { QueryTypes } = require("sequelize");
@@ -23,6 +24,10 @@ const {
   generateSettlementPdf,
   generateSettlementWord,
 } = require("../utils/settlementExport");
+const {
+  generateForm08aPdf,
+  generateForm08aWord,
+} = require("../utils/form08aExport");
 
 // ============================================================
 // VAT HELPERS
@@ -230,6 +235,10 @@ exports.getContractDocuments = async (req, res) => {
       });
     }
 
+    // ============================================================
+    // 1. SETTLEMENTS
+    // ============================================================
+
     const settlements = await ContractSettlement.findAll({
       where: {
         contract_id: contractId,
@@ -246,6 +255,10 @@ exports.getContractDocuments = async (req, res) => {
         ["settlement_id", "DESC"],
       ],
     });
+
+    // ============================================================
+    // 2. FORM 08A
+    // ============================================================
 
     const form08as = await ContractForm08a.findAll({
       where: {
@@ -264,6 +277,10 @@ exports.getContractDocuments = async (req, res) => {
       ],
     });
 
+    // ============================================================
+    // 3. PAYMENTS
+    // ============================================================
+
     const payments = await ContractPayment.findAll({
       where: {
         contract_id: contractId,
@@ -274,13 +291,95 @@ exports.getContractDocuments = async (req, res) => {
       ],
     });
 
+    // ============================================================
+    // 4. GOM TOÀN BỘ created_by
+    // ============================================================
+
+    const allUserIds = [
+      ...settlements.map((item) => Number(item.created_by)),
+      ...form08as.map((item) => Number(item.created_by)),
+      ...payments.map((item) => Number(item.created_by)),
+    ].filter((id) => id > 0);
+
+    const userIds = [...new Set(allUserIds)];
+
+    // ============================================================
+    // 5. LẤY USER
+    // ============================================================
+
+    const users =
+      userIds.length > 0
+        ? await User.findAll({
+            where: {
+              user_id: userIds,
+            },
+            attributes: ["user_id", "name"],
+          })
+        : [];
+
+    // ============================================================
+    // 6. TẠO USER MAP
+    // ============================================================
+
+    const userMap = {};
+
+    users.forEach((user) => {
+      userMap[Number(user.user_id)] = user.name;
+    });
+
+    // ============================================================
+    // 7. FORMAT SETTLEMENTS
+    // ============================================================
+
+    const formattedSettlements = settlements.map((item) => {
+      const data = item.toJSON();
+
+      return {
+        ...data,
+        fullname: userMap[Number(data.created_by)] || "Không xác định",
+      };
+    });
+
+    // ============================================================
+    // 8. FORMAT FORM 08A
+    // ============================================================
+
+    const formattedForm08as = form08as.map((item) => {
+      const data = item.toJSON();
+
+      return {
+        ...data,
+        fullname: userMap[Number(data.created_by)] || "Không xác định",
+      };
+    });
+
+    // ============================================================
+    // 9. FORMAT PAYMENTS
+    // ============================================================
+
+    const formattedPayments = payments.map((item) => {
+      const data = item.toJSON();
+
+      return {
+        ...data,
+        fullname: userMap[Number(data.created_by)] || "Không xác định",
+      };
+    });
+
+    // ============================================================
+    // RESPONSE
+    // ============================================================
+
     return res.json({
       success: true,
       data: {
         contract_id: contractId,
-        settlements,
-        form_08a: form08as,
-        payments,
+
+        settlements: formattedSettlements,
+
+        form_08a: formattedForm08as,
+
+        payments: formattedPayments,
       },
     });
   } catch (error) {
@@ -2287,6 +2386,289 @@ exports.exportSettlementWord = async (req, res) => {
 
       message: "Không thể xuất Word biên bản",
 
+      error: error.message,
+    });
+  }
+};
+
+// ============================================================
+// EXPORT FORM 08A PDF
+// ============================================================
+
+exports.exportForm08aPdf = async (req, res) => {
+  try {
+    const contractId = parseInt(req.params.contractId);
+
+    const form08aId = parseInt(req.params.form08aId);
+
+    // ========================================================
+    // FORM 08A
+    // ========================================================
+
+    const form08a = await ContractForm08a.findOne({
+      where: {
+        form_08a_id: form08aId,
+        contract_id: contractId,
+      },
+
+      include: [
+        {
+          model: ContractForm08aItem,
+          as: "items",
+        },
+
+        {
+          model: ContractSettlement,
+          as: "acceptanceSettlement",
+          required: false,
+        },
+      ],
+    });
+
+    if (!form08a) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy Mẫu 08A",
+      });
+    }
+
+    // ========================================================
+    // CONTRACT
+    // ========================================================
+
+    const contract = await Contract.findByPk(contractId, {
+      include: [
+        {
+          model: ContractParty,
+          as: "parties",
+        },
+
+        {
+          model: ContractRepresentative,
+          as: "representatives",
+        },
+
+        {
+          model: ContractContent,
+          as: "contract_content",
+        },
+
+        {
+          model: ContractDeparture,
+          as: "departures",
+        },
+
+        {
+          model: ContractPrice,
+          as: "price_items",
+        },
+
+        {
+          model: ContractAdvance,
+          as: "advance",
+        },
+
+        {
+          model: ContractLegalBasis,
+          as: "legal_bases",
+        },
+      ],
+    });
+
+    if (!contract) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy hợp đồng",
+      });
+    }
+
+    // ========================================================
+    // GENERATE
+    // ========================================================
+
+    const pdfBuffer = await generateForm08aPdf({
+      contract,
+      form08a,
+    });
+
+    // ========================================================
+    // FILE NAME
+    // ========================================================
+
+    const rawName = form08a.document_no || `Mau-08A-${form08aId}`;
+
+    const safeName = String(rawName)
+      .replace(/[\/\\:*?"<>|]/g, "-")
+      .replace(/\s+/g, "_")
+      .trim();
+
+    const fileName = `${safeName}.pdf`;
+
+    // ========================================================
+    // RESPONSE
+    // ========================================================
+
+    res.setHeader("Content-Type", "application/pdf");
+
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${fileName}"; filename*=UTF-8''${encodeURIComponent(
+        fileName,
+      )}`,
+    );
+
+    res.setHeader("Content-Length", pdfBuffer.length);
+
+    return res.send(pdfBuffer);
+  } catch (error) {
+    console.error("exportForm08aPdf error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Không thể xuất PDF Mẫu 08A",
+      error: error.message,
+    });
+  }
+};
+
+// ============================================================
+// EXPORT FORM 08A WORD
+// ============================================================
+
+exports.exportForm08aWord = async (req, res) => {
+  try {
+    const contractId = parseInt(req.params.contractId);
+
+    const form08aId = parseInt(req.params.form08aId);
+
+    // ========================================================
+    // FORM 08A
+    // ========================================================
+
+    const form08a = await ContractForm08a.findOne({
+      where: {
+        form_08a_id: form08aId,
+        contract_id: contractId,
+      },
+
+      include: [
+        {
+          model: ContractForm08aItem,
+          as: "items",
+        },
+
+        {
+          model: ContractSettlement,
+          as: "acceptanceSettlement",
+          required: false,
+        },
+      ],
+    });
+
+    if (!form08a) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy Mẫu 08A",
+      });
+    }
+
+    // ========================================================
+    // CONTRACT
+    // ========================================================
+
+    const contract = await Contract.findByPk(contractId, {
+      include: [
+        {
+          model: ContractParty,
+          as: "parties",
+        },
+
+        {
+          model: ContractRepresentative,
+          as: "representatives",
+        },
+
+        {
+          model: ContractContent,
+          as: "contract_content",
+        },
+
+        {
+          model: ContractDeparture,
+          as: "departures",
+        },
+
+        {
+          model: ContractPrice,
+          as: "price_items",
+        },
+
+        {
+          model: ContractAdvance,
+          as: "advance",
+        },
+
+        {
+          model: ContractLegalBasis,
+          as: "legal_bases",
+        },
+      ],
+    });
+
+    if (!contract) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy hợp đồng",
+      });
+    }
+
+    // ========================================================
+    // GENERATE
+    // ========================================================
+
+    const wordBuffer = await generateForm08aWord({
+      contract,
+      form08a,
+    });
+
+    // ========================================================
+    // FILE NAME
+    // ========================================================
+
+    const rawName = form08a.document_no || `Mau-08A-${form08aId}`;
+
+    const safeName = String(rawName)
+      .replace(/[\/\\:*?"<>|]/g, "-")
+      .replace(/\s+/g, "_")
+      .trim();
+
+    const fileName = `${safeName}.docx`;
+
+    // ========================================================
+    // RESPONSE
+    // ========================================================
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    );
+
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${fileName}"; filename*=UTF-8''${encodeURIComponent(
+        fileName,
+      )}`,
+    );
+
+    res.setHeader("Content-Length", wordBuffer.length);
+
+    return res.send(wordBuffer);
+  } catch (error) {
+    console.error("exportForm08aWord error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Không thể xuất Word Mẫu 08A",
       error: error.message,
     });
   }

@@ -126,4 +126,18 @@ router.get(
   contractDocumentController.exportSettlementWord,
 );
 
+// ============================================================
+// EXPORT MẪU 08A
+// ============================================================
+
+router.get(
+  "/api/contracts/:contractId/form-08a/:form08aId/export/pdf",
+  contractDocumentController.exportForm08aPdf,
+);
+
+router.get(
+  "/api/contracts/:contractId/form-08a/:form08aId/export/word",
+  contractDocumentController.exportForm08aWord,
+);
+
 module.exports = router;

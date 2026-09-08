@@ -2,6 +2,7 @@
 
 const { Op } = require("sequelize");
 const sequelize = require("../config/database");
+const User = require("../models/user.model");
 
 const {
   Contract,
@@ -851,6 +852,7 @@ exports.createContract = async (req, res) => {
 // LẤY DANH SÁCH HỢP ĐỒNG
 // Có filter + pagination
 // =====================================================
+
 exports.getContracts = async (req, res) => {
   try {
     const {
@@ -940,7 +942,7 @@ exports.getContracts = async (req, res) => {
     const offset = (pageNumber - 1) * limitNumber;
 
     // ========================================
-    // QUERY
+    // QUERY CONTRACT
     // ========================================
 
     const result = await Contract.findAndCountAll({
@@ -966,6 +968,43 @@ exports.getContracts = async (req, res) => {
     });
 
     // ========================================
+    // GOM TOÀN BỘ created_by
+    // ========================================
+
+    const userIds = [
+      ...new Set(
+        result.rows
+          .map((item) => Number(item.created_by))
+          .filter((id) => id > 0),
+      ),
+    ];
+
+    // ========================================
+    // QUERY USER
+    // ========================================
+
+    const users =
+      userIds.length > 0
+        ? await User.findAll({
+            where: {
+              user_id: userIds,
+            },
+
+            attributes: ["user_id", "name"],
+          })
+        : [];
+
+    // ========================================
+    // TẠO USER MAP
+    // ========================================
+
+    const userMap = {};
+
+    users.forEach((user) => {
+      userMap[Number(user.user_id)] = user.name;
+    });
+
+    // ========================================
     // FORMAT CHO FE
     // ========================================
 
@@ -979,13 +1018,31 @@ exports.getContracts = async (req, res) => {
       return {
         ...contract,
 
+        // ====================================
+        // NGƯỜI TẠO
+        // ====================================
+
+        fullname: userMap[Number(contract.created_by)] || "Không xác định",
+
+        // ====================================
+        // KHÁCH HÀNG
+        // ====================================
+
         customer_name: customer?.company_name || null,
+
+        // ====================================
+        // LOẠI HỢP ĐỒNG
+        // ====================================
 
         contract_type_id: contract.contract_type,
 
         contract_type: getContractTypeCode(contract.contract_type),
 
         contract_type_name: getContractTypeName(contract.contract_type),
+
+        // ====================================
+        // TRẠNG THÁI
+        // ====================================
 
         status_id: contract.status,
 
@@ -1004,8 +1061,11 @@ exports.getContracts = async (req, res) => {
 
       pagination: {
         page: pageNumber,
+
         limit: limitNumber,
+
         total: result.count,
+
         total_pages: totalPages,
       },
     });
@@ -1014,7 +1074,9 @@ exports.getContracts = async (req, res) => {
 
     return res.status(500).json({
       success: false,
+
       message: "Lỗi khi lấy danh sách hợp đồng",
+
       error: error.message,
     });
   }
