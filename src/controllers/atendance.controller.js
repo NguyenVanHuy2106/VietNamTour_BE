@@ -364,3 +364,181 @@ exports.submitCheckOut = async (req, res) => {
     res.status(500).json({ success: false, message: "Lỗi hệ thống Backend." });
   }
 };
+
+exports.adminAdjustAttendance = async (req, res) => {
+  try {
+    const adminId = req.user.user_id || req.user.id;
+
+    if (!adminId) {
+      return res.status(401).json({
+        success: false,
+        message: "Không xác định được người dùng đăng nhập.",
+      });
+    }
+
+    // Lấy thông tin admin trực tiếp từ DB
+    const admin = await User.findByPk(adminId);
+
+    if (!admin) {
+      return res.status(401).json({
+        success: false,
+        message: "Tài khoản đăng nhập không tồn tại.",
+      });
+    }
+
+    // Debug thử xem role thực tế đang là gì
+    console.log("ADMIN LOGIN:", {
+      userId: adminId,
+      role: admin.role,
+      name: admin.name,
+    });
+
+    if (String(admin.role).toUpperCase() !== "ADMIN") {
+      return res.status(403).json({
+        success: false,
+        message: "Bạn không có quyền kéo công.",
+      });
+    }
+
+    const { userId, workDate, checkIn, checkOut, reason } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: "Vui lòng chọn nhân viên.",
+      });
+    }
+
+    if (!workDate) {
+      return res.status(400).json({
+        success: false,
+        message: "Vui lòng chọn ngày làm việc.",
+      });
+    }
+
+    if (!checkIn) {
+      return res.status(400).json({
+        success: false,
+        message: "Vui lòng nhập giờ vào.",
+      });
+    }
+
+    if (!reason || !reason.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Vui lòng nhập lý do kéo công.",
+      });
+    }
+
+    const user = await User.findByPk(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy nhân viên.",
+      });
+    }
+
+    // Không cho kéo ngày tương lai
+    const now = new Date();
+
+    const todayVN = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Ho_Chi_Minh",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(now);
+
+    if (workDate > todayVN) {
+      return res.status(400).json({
+        success: false,
+        message: "Không thể kéo công cho ngày trong tương lai.",
+      });
+    }
+
+    // Tạo timestamp theo giờ Việt Nam
+    const checkInDateTime = new Date(`${workDate}T${checkIn}:00+07:00`);
+
+    const checkOutDateTime = checkOut
+      ? new Date(`${workDate}T${checkOut}:00+07:00`)
+      : null;
+
+    if (checkOutDateTime && checkOutDateTime <= checkInDateTime) {
+      return res.status(400).json({
+        success: false,
+        message: "Giờ ra phải lớn hơn giờ vào.",
+      });
+    }
+
+    // Giờ chuẩn đang đặt là 08:00
+    const [hour, minute] = checkIn.split(":").map(Number);
+
+    const status = hour > 8 || (hour === 8 && minute > 0) ? "LATE" : "ON_TIME";
+
+    let attendance = await Attendance.findOne({
+      where: {
+        userId,
+        workDate,
+      },
+    });
+
+    // =============================
+    // ĐÃ CÓ CÔNG -> UPDATE
+    // =============================
+    if (attendance) {
+      await attendance.update({
+        checkIn: checkInDateTime,
+        checkOut: checkOutDateTime,
+        status,
+
+        isAdjusted: true,
+        adjustedBy: adminId,
+        adjustedAt: new Date(),
+        adjustReason: reason.trim(),
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: `Đã kéo công ngày ${workDate} cho ${user.name}.`,
+        action: "UPDATE",
+        data: attendance,
+      });
+    }
+
+    // =============================
+    // CHƯA CÓ CÔNG -> CREATE
+    // =============================
+    attendance = await Attendance.create({
+      userId,
+      workDate,
+
+      checkIn: checkInDateTime,
+      checkOut: checkOutDateTime,
+
+      ipAddress: null,
+      deviceIdUsed: null,
+
+      status,
+
+      isAdjusted: true,
+      adjustedBy: adminId,
+      adjustedAt: new Date(),
+      adjustReason: reason.trim(),
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: `Đã thêm công ngày ${workDate} cho ${user.name}.`,
+      action: "CREATE",
+      data: attendance,
+    });
+  } catch (error) {
+    console.error("Lỗi adminAdjustAttendance:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Lỗi hệ thống khi kéo công.",
+      error: error.message,
+    });
+  }
+};

@@ -37,6 +37,29 @@ const Attendance = sequelize.define(
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
     },
+    isAdjusted: {
+      type: DataTypes.BOOLEAN,
+      field: "is_adjusted",
+      defaultValue: false,
+    },
+
+    adjustedBy: {
+      type: DataTypes.INTEGER,
+      field: "adjusted_by",
+      allowNull: true,
+    },
+
+    adjustedAt: {
+      type: DataTypes.DATE,
+      field: "adjusted_at",
+      allowNull: true,
+    },
+
+    adjustReason: {
+      type: DataTypes.STRING(500),
+      field: "adjust_reason",
+      allowNull: true,
+    },
   },
   {
     schema: "timekeeping",
