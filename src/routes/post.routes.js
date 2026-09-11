@@ -11,6 +11,7 @@ const {
   searchPost,
   getCNDLPost,
   getPostBySlug,
+  updatePost,
 } = require("../controllers/post.controller");
 
 // Route thêm user
@@ -22,6 +23,7 @@ router.get("/api/post/:id(\\d+)", getPostDetail);
 router.get("/api/post/slug/:slug", getPostBySlug);
 
 router.post("/api/post/add", verifyToken, createPost);
+router.post("/api/post/update", verifyToken, updatePost);
 
 //router.get("/api/post/:id", getPostDetail);
 

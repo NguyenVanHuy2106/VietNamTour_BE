@@ -503,3 +503,155 @@ exports.getPostBySlug = async (req, res) => {
     });
   }
 };
+
+exports.updatePost = async (req, res) => {
+  const transaction = await Post.sequelize.transaction();
+
+  try {
+    const {
+      post_id,
+      title,
+      slug,
+      content,
+      thumbnail_url,
+      description,
+      updated_by,
+      category_id,
+      tag_ids,
+    } = req.body;
+
+    // =========================
+    // 1. Kiểm tra post_id
+    // =========================
+    if (!post_id) {
+      await transaction.rollback();
+
+      return res.status(400).json({
+        message: "Thiếu post_id.",
+      });
+    }
+
+    // =========================
+    // 2. Kiểm tra dữ liệu bắt buộc
+    // =========================
+    if (
+      !title ||
+      !slug ||
+      !content ||
+      !thumbnail_url ||
+      !description ||
+      !category_id ||
+      !tag_ids ||
+      !Array.isArray(tag_ids) ||
+      tag_ids.length === 0
+    ) {
+      await transaction.rollback();
+
+      return res.status(400).json({
+        message:
+          "Vui lòng nhập đầy đủ thông tin bắt buộc và chọn ít nhất một thẻ.",
+      });
+    }
+
+    // =========================
+    // 3. Kiểm tra bài viết tồn tại
+    // =========================
+    const post = await Post.findByPk(post_id, {
+      transaction,
+    });
+
+    if (!post) {
+      await transaction.rollback();
+
+      return res.status(404).json({
+        message: "Không tìm thấy bài viết.",
+      });
+    }
+
+    // =========================
+    // 4. Kiểm tra tag hợp lệ
+    // =========================
+    const tags = await Tag.findAll({
+      where: {
+        tag_id: tag_ids,
+      },
+      transaction,
+    });
+
+    if (tags.length !== tag_ids.length) {
+      await transaction.rollback();
+
+      return res.status(400).json({
+        message: "Một hoặc nhiều thẻ không hợp lệ.",
+      });
+    }
+
+    // =========================
+    // 5. Update bài viết
+    // =========================
+    await post.update(
+      {
+        title,
+        slug,
+        content,
+        thumbnail_url,
+        description,
+        category_id,
+
+        ...(updated_by
+          ? {
+              updated_by,
+            }
+          : {}),
+
+        updated_at: new Date(),
+      },
+      {
+        transaction,
+      },
+    );
+
+    // =========================
+    // 6. Xóa tag cũ
+    // =========================
+    await PostTag.destroy({
+      where: {
+        post_id,
+      },
+      transaction,
+    });
+
+    // =========================
+    // 7. Tạo lại tag mới
+    // =========================
+    const postTagsToCreate = tag_ids.map((tagId) => ({
+      post_id,
+      tag_id: tagId,
+    }));
+
+    await PostTag.bulkCreate(postTagsToCreate, {
+      transaction,
+    });
+
+    // =========================
+    // 8. Commit
+    // =========================
+    await transaction.commit();
+
+    return res.status(200).json({
+      success: true,
+      message: "Cập nhật bài viết thành công!",
+      data: post,
+    });
+  } catch (error) {
+    await transaction.rollback();
+
+    console.error("Lỗi update bài viết:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Lỗi server khi cập nhật bài viết.",
+      error: error.message,
+    });
+  }
+};
