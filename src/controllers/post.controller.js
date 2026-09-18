@@ -431,7 +431,7 @@ exports.getCNDLPost = async (req, res) => {
 
     const posts = await Post.findAll({
       where: { category_id },
-      order: [["created_at", "ASC"]],
+      order: [["created_at", "DESC"]],
       limit: 3,
       distinct: true,
       include: [

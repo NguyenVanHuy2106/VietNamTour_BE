@@ -51,7 +51,7 @@ const createTour = async (req, res) => {
         tourtype: isGroup ? "DOAN" : "",
         slug,
       },
-      { transaction: t }
+      { transaction: t },
     );
 
     const tourid = newTour.tourid;
@@ -66,7 +66,7 @@ const createTour = async (req, res) => {
           created_by,
           created_at: new Date(),
         },
-        { transaction: t }
+        { transaction: t },
       ),
 
       // 2.2 Tạo giá tour
@@ -77,7 +77,7 @@ const createTour = async (req, res) => {
           created_by,
           created_at: new Date(),
         },
-        { transaction: t }
+        { transaction: t },
       ),
 
       // 2.3 Tạo số lượng tour
@@ -90,7 +90,7 @@ const createTour = async (req, res) => {
               created_by,
               created_at: new Date(),
             },
-            { transaction: t }
+            { transaction: t },
           )
         : Promise.resolve(),
 
@@ -105,7 +105,7 @@ const createTour = async (req, res) => {
               created_by,
               created_at: new Date(),
             })),
-            { transaction: t }
+            { transaction: t },
           )
         : Promise.resolve(),
 
@@ -117,7 +117,7 @@ const createTour = async (req, res) => {
               highlight_key: h.highlight_key,
               highlight_value: h.highlight_value,
             })),
-            { transaction: t }
+            { transaction: t },
           )
         : Promise.resolve(),
     ]);
@@ -244,7 +244,7 @@ const getAllTours = async (req, res) => {
           price,
           images,
         };
-      })
+      }),
     );
 
     return res.status(200).json({
@@ -306,7 +306,7 @@ const get8NewTours = async (req, res) => {
           price,
           images,
         };
-      })
+      }),
     );
 
     return res.status(200).json({
@@ -330,7 +330,7 @@ const getDOANTours = async (req, res) => {
         tourtype: "DOAN", // chỉ lấy tour không phải khách đoàn
       },
       order: [["created_at", "DESC"]], // Sắp xếp theo thời gian tạo mới nhất
-      limit: 8, // Lấy 8 tour mới nhất
+      limit: 12, // Lấy 8 tour mới nhất
     });
 
     const tourList = await Promise.all(
@@ -368,7 +368,7 @@ const getDOANTours = async (req, res) => {
           price,
           images,
         };
-      })
+      }),
     );
 
     return res.status(200).json({
@@ -424,7 +424,7 @@ const updateTour = async (req, res) => {
         updated_by,
         updated_at: new Date(),
       },
-      { where: { tourid }, transaction: t }
+      { where: { tourid }, transaction: t },
     );
 
     // 2. Xóa toàn bộ bảng phụ liên quan
@@ -446,7 +446,7 @@ const updateTour = async (req, res) => {
           created_by: updated_by,
           created_at: new Date(),
         },
-        { transaction: t }
+        { transaction: t },
       ),
 
       // 3.2 Giá tour
@@ -457,7 +457,7 @@ const updateTour = async (req, res) => {
           created_by: updated_by,
           created_at: new Date(),
         },
-        { transaction: t }
+        { transaction: t },
       ),
 
       // 3.3 Số lượng tour (nếu có)
@@ -469,7 +469,7 @@ const updateTour = async (req, res) => {
               created_by: updated_by,
               created_at: new Date(),
             },
-            { transaction: t }
+            { transaction: t },
           )
         : Promise.resolve(),
 
@@ -484,7 +484,7 @@ const updateTour = async (req, res) => {
               created_by: updated_by,
               created_at: new Date(),
             })),
-            { transaction: t }
+            { transaction: t },
           )
         : Promise.resolve(),
 
@@ -496,7 +496,7 @@ const updateTour = async (req, res) => {
               highlight_key: h.highlight_key,
               highlight_value: h.highlight_value,
             })),
-            { transaction: t }
+            { transaction: t },
           )
         : Promise.resolve(),
     ]);
@@ -683,7 +683,7 @@ const searchTour = async (req, res) => {
           price,
           images,
         };
-      })
+      }),
     );
 
     return res.status(200).json({
@@ -751,7 +751,7 @@ const getRelationTours = async (req, res) => {
           price,
           images,
         };
-      })
+      }),
     );
 
     return res.status(200).json({
