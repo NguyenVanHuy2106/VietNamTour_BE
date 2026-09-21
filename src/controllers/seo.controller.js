@@ -149,6 +149,53 @@ const renderTour = async (req, res) => {
   }
 };
 
+const renderTourList = async (req, res) => {
+  try {
+    let html = fs.readFileSync(FRONTEND_INDEX, "utf8");
+
+    const title = "Danh sách tour du lịch | Việt Nam Tour";
+
+    const description =
+      "Khám phá các tour du lịch trong nước, tour khách đoàn doanh nghiệp, team building, MICE và gala dinner do Việt Nam Tour tổ chức.";
+
+    const canonical = "https://myvietnamtour.vn/danh-sach-tour";
+
+    html = html.replace(/<link[^>]+rel=["']canonical["'][^>]*>/gi, "");
+
+    html = html.replace(
+      /<title>[\s\S]*?<\/title>/i,
+      `<title>${escapeHtml(title)}</title>`,
+    );
+
+    html = html.replace(
+      /<meta\s+name=["']description["'][^>]*>/i,
+      `<meta name="description" content="${escapeHtml(description)}"/>`,
+    );
+
+    html = html
+      .replace(/<meta\s+property=["']og:title["'][^>]*>/gi, "")
+      .replace(/<meta\s+property=["']og:description["'][^>]*>/gi, "")
+      .replace(/<meta\s+property=["']og:url["'][^>]*>/gi, "");
+
+    const seoTags = `
+<link rel="canonical" href="${canonical}"/>
+
+<meta property="og:title" content="${escapeHtml(title)}"/>
+<meta property="og:description" content="${escapeHtml(description)}"/>
+<meta property="og:url" content="${canonical}"/>
+`;
+
+    html = html.replace("</head>", `${seoTags}</head>`);
+
+    return res.status(200).type("html").send(html);
+  } catch (error) {
+    console.error("SEO TOUR LIST RENDER ERROR:", error);
+
+    return res.status(500).sendFile(FRONTEND_INDEX);
+  }
+};
+
 module.exports = {
   renderTour,
+  renderTourList,
 };
