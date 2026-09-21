@@ -56,25 +56,25 @@ const Contract = sequelize.define(
     },
 
     vat_rate: {
-      type: DataTypes.FLOAT,
+      type: DataTypes.DECIMAL(5, 2),
       allowNull: false,
       defaultValue: 0,
     },
 
     contract_value: {
-      type: DataTypes.FLOAT,
+      type: DataTypes.DECIMAL(18, 0),
       allowNull: false,
       defaultValue: 0,
     },
 
     vat_amount: {
-      type: DataTypes.FLOAT,
+      type: DataTypes.DECIMAL(18, 0),
       allowNull: false,
       defaultValue: 0,
     },
 
     total_amount: {
-      type: DataTypes.FLOAT,
+      type: DataTypes.DECIMAL(18, 0),
       allowNull: false,
       defaultValue: 0,
     },
