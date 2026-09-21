@@ -2,6 +2,7 @@ const fs = require("fs");
 
 const Tour = require("../models/tours/tour.model");
 const TourImage = require("../models/tours/tourImage.model");
+const Posts = require("../models/posts.model");
 
 const FRONTEND_INDEX = "/var/www/VietNamTour_FE/build/index.html";
 
@@ -194,8 +195,153 @@ const renderTourList = async (req, res) => {
     return res.status(500).sendFile(FRONTEND_INDEX);
   }
 };
+const renderBlog = async (req, res) => {
+  try {
+    const slug = String(req.params.slug || "").trim();
+
+    if (!slug) {
+      return res.status(404).sendFile(FRONTEND_INDEX);
+    }
+
+    const post = await Posts.findOne({
+      where: {
+        slug,
+      },
+    });
+
+    if (!post) {
+      return res.status(404).sendFile(FRONTEND_INDEX);
+    }
+
+    let html = fs.readFileSync(FRONTEND_INDEX, "utf8");
+
+    // =========================
+    // TITLE
+    // =========================
+    const title = post.title || "Bản tin du lịch | Việt Nam Tour";
+
+    // =========================
+    // DESCRIPTION
+    // =========================
+    let description = stripHtml(post.description || post.content || "");
+
+    if (description.length > 160) {
+      description = description.substring(0, 157).trim() + "...";
+    }
+
+    if (!description) {
+      description =
+        `${title}. Cẩm nang, kinh nghiệm và thông tin du lịch ` +
+        `được cập nhật bởi Việt Nam Tour.`;
+    }
+
+    // =========================
+    // CANONICAL
+    // =========================
+    const canonical = `https://myvietnamtour.vn/blog/${encodeURIComponent(
+      post.slug,
+    )}`;
+
+    // =========================
+    // IMAGE
+    // =========================
+    const image =
+      post.thumbnail_url || "https://cdn.myvietnamtour.vn/uploads/1.png";
+
+    // =========================
+    // XÓA CANONICAL CŨ
+    // =========================
+    html = html.replace(/<link[^>]+rel=["']canonical["'][^>]*>/gi, "");
+
+    // =========================
+    // TITLE
+    // =========================
+    html = html.replace(
+      /<title>[\s\S]*?<\/title>/i,
+      `<title>${escapeHtml(title)}</title>`,
+    );
+
+    // =========================
+    // DESCRIPTION
+    // =========================
+    html = html.replace(
+      /<meta\s+name=["']description["'][^>]*>/i,
+      `<meta name="description" content="${escapeHtml(description)}"/>`,
+    );
+
+    // =========================
+    // XÓA OG CŨ
+    // =========================
+    html = html
+      .replace(/<meta\s+property=["']og:title["'][^>]*>/gi, "")
+      .replace(/<meta\s+property=["']og:description["'][^>]*>/gi, "")
+      .replace(/<meta\s+property=["']og:image["'][^>]*>/gi, "")
+      .replace(/<meta\s+property=["']og:url["'][^>]*>/gi, "")
+      .replace(/<meta\s+property=["']og:type["'][^>]*>/gi, "");
+
+    // =========================
+    // BLOG SCHEMA
+    // =========================
+    const publishedTime = post.created_at
+      ? new Date(post.created_at).toISOString()
+      : "";
+
+    const schema = {
+      "@context": "https://schema.org",
+      "@type": "BlogPosting",
+      headline: title,
+      description: description,
+      image: [image],
+      mainEntityOfPage: {
+        "@type": "WebPage",
+        "@id": canonical,
+      },
+      publisher: {
+        "@type": "Organization",
+        name: "Việt Nam Tour",
+        url: "https://myvietnamtour.vn/",
+      },
+    };
+
+    if (publishedTime) {
+      schema.datePublished = publishedTime;
+    }
+
+    // =========================
+    // SEO TAGS
+    // =========================
+    const seoTags = `
+
+<link rel="canonical" href="${canonical}"/>
+
+<meta property="og:type" content="article"/>
+<meta property="og:title" content="${escapeHtml(title)}"/>
+<meta property="og:description" content="${escapeHtml(description)}"/>
+<meta property="og:url" content="${canonical}"/>
+<meta property="og:image" content="${escapeHtml(image)}"/>
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="${escapeHtml(title)}"/>
+<meta name="twitter:description" content="${escapeHtml(description)}"/>
+<meta name="twitter:image" content="${escapeHtml(image)}"/>
+
+<script type="application/ld+json">
+${JSON.stringify(schema)}
+</script>
+`;
+
+    html = html.replace("</head>", `${seoTags}</head>`);
+
+    return res.status(200).type("html").send(html);
+  } catch (error) {
+    console.error("SEO BLOG RENDER ERROR:", error);
+
+    return res.status(500).sendFile(FRONTEND_INDEX);
+  }
+};
 
 module.exports = {
   renderTour,
   renderTourList,
+  renderBlog,
 };
