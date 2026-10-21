@@ -26,6 +26,23 @@ const ContractPayment = require("./contractPayment.model");
 const ContractForm08a = require("./contractForm08a.model");
 const ContractForm08aItem = require("./contractForm08aItem.model");
 
+// =========================
+// MODEL SALARY - MDM
+// =========================
+const UserSalaryConfig = require("./salary/userSalaryConfig.model");
+const PayrollInsuranceConfig = require("./salary/payrollInsuranceConfig.model");
+// MODEL SALARY - VNTOUR
+// =========================
+const PayrollPeriod = require("./salary/payrollPeriod.model");
+const PayrollAttendance = require("./salary/payrollAttendance.model");
+const PayrollAttendanceAdjustment = require("./salary/payrollAttendanceAdjustment.model");
+
+const EmployeePayroll = require("./salary/employeePayroll.model");
+const PayrollAdjustment = require("./salary/payrollAdjustment.model");
+const EmployeePayrollVersion = require("./salary/employeePayrollVersion.model");
+
+const PayrollLog = require("./salary/payrollLog.model");
+
 // Một bài viết có nhiều tags, thông qua bảng trung gian PostTag
 Post.belongsToMany(Tag, {
   through: PostTag,
@@ -260,6 +277,231 @@ ContractForm08aItem.belongsTo(ContractSettlementItem, {
   as: "settlementItem",
 });
 
+// ASSOCIATION: USER SALARY CONFIG
+// ========================================================
+
+User.hasMany(UserSalaryConfig, {
+  foreignKey: "user_id",
+  as: "salaryConfigs",
+});
+
+UserSalaryConfig.belongsTo(User, {
+  foreignKey: "user_id",
+  as: "user",
+});
+
+UserSalaryConfig.belongsTo(User, {
+  foreignKey: "created_by",
+  as: "creator",
+});
+
+UserSalaryConfig.belongsTo(User, {
+  foreignKey: "updated_by",
+  as: "updater",
+});
+
+// ========================================================
+// ASSOCIATION: INSURANCE CONFIG
+// ========================================================
+
+PayrollInsuranceConfig.belongsTo(User, {
+  foreignKey: "created_by",
+  as: "creator",
+});
+
+// ========================================================
+// ASSOCIATION: PAYROLL PERIOD
+// ========================================================
+
+PayrollPeriod.belongsTo(User, {
+  foreignKey: "created_by",
+  as: "creator",
+});
+
+PayrollPeriod.belongsTo(User, {
+  foreignKey: "published_by",
+  as: "publisher",
+});
+
+// ========================================================
+// ASSOCIATION: PAYROLL ATTENDANCE
+// ========================================================
+
+PayrollPeriod.hasMany(PayrollAttendance, {
+  foreignKey: "payroll_period_id",
+  as: "attendances",
+});
+
+PayrollAttendance.belongsTo(PayrollPeriod, {
+  foreignKey: "payroll_period_id",
+  as: "payrollPeriod",
+});
+
+User.hasMany(PayrollAttendance, {
+  foreignKey: "user_id",
+  as: "payrollAttendances",
+});
+
+PayrollAttendance.belongsTo(User, {
+  foreignKey: "user_id",
+  as: "user",
+});
+
+PayrollAttendance.belongsTo(User, {
+  foreignKey: "confirmed_by",
+  as: "confirmer",
+});
+
+// ========================================================
+// ASSOCIATION: ATTENDANCE ADJUSTMENT
+// ========================================================
+
+PayrollAttendance.hasMany(PayrollAttendanceAdjustment, {
+  foreignKey: "payroll_attendance_id",
+  as: "adjustments",
+});
+
+PayrollAttendanceAdjustment.belongsTo(PayrollAttendance, {
+  foreignKey: "payroll_attendance_id",
+  as: "payrollAttendance",
+});
+
+User.hasMany(PayrollAttendanceAdjustment, {
+  foreignKey: "user_id",
+  as: "payrollAttendanceAdjustments",
+});
+
+PayrollAttendanceAdjustment.belongsTo(User, {
+  foreignKey: "user_id",
+  as: "user",
+});
+
+PayrollAttendanceAdjustment.belongsTo(User, {
+  foreignKey: "created_by",
+  as: "creator",
+});
+
+// ========================================================
+// ASSOCIATION: EMPLOYEE PAYROLL
+// ========================================================
+
+PayrollPeriod.hasMany(EmployeePayroll, {
+  foreignKey: "payroll_period_id",
+  as: "employeePayrolls",
+});
+
+EmployeePayroll.belongsTo(PayrollPeriod, {
+  foreignKey: "payroll_period_id",
+  as: "payrollPeriod",
+});
+
+User.hasMany(EmployeePayroll, {
+  foreignKey: "user_id",
+  as: "payrolls",
+});
+
+EmployeePayroll.belongsTo(User, {
+  foreignKey: "user_id",
+  as: "user",
+});
+
+UserSalaryConfig.hasMany(EmployeePayroll, {
+  foreignKey: "salary_config_id",
+  as: "payrolls",
+});
+
+EmployeePayroll.belongsTo(UserSalaryConfig, {
+  foreignKey: "salary_config_id",
+  as: "salaryConfig",
+});
+
+EmployeePayroll.belongsTo(User, {
+  foreignKey: "calculated_by",
+  as: "calculator",
+});
+
+EmployeePayroll.belongsTo(User, {
+  foreignKey: "published_by",
+  as: "publisher",
+});
+
+// ========================================================
+// ASSOCIATION: PAYROLL ADJUSTMENT
+// ========================================================
+
+EmployeePayroll.hasMany(PayrollAdjustment, {
+  foreignKey: "employee_payroll_id",
+  as: "adjustments",
+});
+
+PayrollAdjustment.belongsTo(EmployeePayroll, {
+  foreignKey: "employee_payroll_id",
+  as: "employeePayroll",
+});
+
+PayrollAdjustment.belongsTo(User, {
+  foreignKey: "created_by",
+  as: "creator",
+});
+
+// ========================================================
+// ASSOCIATION: PAYROLL VERSION
+// ========================================================
+
+EmployeePayroll.hasMany(EmployeePayrollVersion, {
+  foreignKey: "employee_payroll_id",
+  as: "versions",
+});
+
+EmployeePayrollVersion.belongsTo(EmployeePayroll, {
+  foreignKey: "employee_payroll_id",
+  as: "employeePayroll",
+});
+
+EmployeePayrollVersion.belongsTo(User, {
+  foreignKey: "created_by",
+  as: "creator",
+});
+
+// ========================================================
+// ASSOCIATION: PAYROLL LOG
+// ========================================================
+
+PayrollPeriod.hasMany(PayrollLog, {
+  foreignKey: "payroll_period_id",
+  as: "logs",
+});
+
+PayrollLog.belongsTo(PayrollPeriod, {
+  foreignKey: "payroll_period_id",
+  as: "payrollPeriod",
+});
+
+EmployeePayroll.hasMany(PayrollLog, {
+  foreignKey: "employee_payroll_id",
+  as: "logs",
+});
+
+PayrollLog.belongsTo(EmployeePayroll, {
+  foreignKey: "employee_payroll_id",
+  as: "employeePayroll",
+});
+
+User.hasMany(PayrollLog, {
+  foreignKey: "user_id",
+  as: "payrollLogs",
+});
+
+PayrollLog.belongsTo(User, {
+  foreignKey: "user_id",
+  as: "user",
+});
+
+PayrollLog.belongsTo(User, {
+  foreignKey: "created_by",
+  as: "creator",
+});
+
 // Xuất các model đã được định nghĩa mối quan hệ
 module.exports = {
   Post,
@@ -285,4 +527,15 @@ module.exports = {
   ContractPayment,
   ContractForm08a,
   ContractForm08aItem,
+  UserSalaryConfig,
+  PayrollInsuranceConfig,
+
+  // Payroll - vntour
+  PayrollPeriod,
+  PayrollAttendance,
+  PayrollAttendanceAdjustment,
+  EmployeePayroll,
+  PayrollAdjustment,
+  EmployeePayrollVersion,
+  PayrollLog,
 };
