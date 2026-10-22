@@ -227,6 +227,26 @@ const EmployeePayroll = sequelize.define(
       type: DataTypes.DATE,
       allowNull: true,
     },
+    payment_status: {
+      type: DataTypes.STRING(20),
+      allowNull: false,
+      defaultValue: "UNPAID",
+    },
+
+    paid_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+
+    paid_by: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+
+    payment_reference: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+    },
   },
   {
     tableName: "employee_payrolls",

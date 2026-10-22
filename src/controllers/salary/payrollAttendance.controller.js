@@ -254,485 +254,485 @@ exports.getPayrollAttendances = async (req, res) => {
 // => 12
 // ==========================================================
 
-// exports.syncPayrollAttendance = async (req, res) => {
-//   const transaction = await sequelize.transaction();
-
-//   try {
-//     const { payroll_period_id } = req.body;
-
-//     if (!payroll_period_id) {
-//       await transaction.rollback();
-
-//       return res.status(400).json({
-//         success: false,
-
-//         message: "Thiếu payroll_period_id",
-//       });
-//     }
-
-//     // ======================================================
-//     // 1. KỲ LƯƠNG
-//     // ======================================================
-
-//     const period = await PayrollPeriod.findByPk(payroll_period_id, {
-//       transaction,
-//     });
-
-//     if (!period) {
-//       await transaction.rollback();
-
-//       return res.status(404).json({
-//         success: false,
-
-//         message: "Không tìm thấy kỳ lương",
-//       });
-//     }
-
-//     if (["PUBLISHED", "CLOSED"].includes(period.status)) {
-//       await transaction.rollback();
-
-//       return res.status(400).json({
-//         success: false,
-
-//         message: "Kỳ lương đã khóa",
-//       });
-//     }
-
-//     // ======================================================
-//     // 2. TÍNH CÔNG CHUẨN FULL-TIME
-//     // ======================================================
-
-//     const fullTimeStandardDays = calculateFullTimeStandardDays(
-//       period.start_date,
-//       period.end_date,
-//     );
-
-//     // ======================================================
-//     // 3. QUERY CHẤM CÔNG
-//     // ======================================================
-
-//     const attendanceData = await sequelize.query(
-//       `
-//         SELECT
-//             u.user_id,
-//             u.name,
-
-//             SUM(
-//                 CASE
-
-//                     WHEN (
-//                         EXTRACT(
-//                             EPOCH
-//                             FROM (
-//                                 tk.check_out
-//                                 -
-//                                 tk.check_in
-//                             )
-//                         )
-//                         /
-//                         3600
-//                     ) >= 6.0
-
-//                     THEN 1.0
-
-//                     WHEN (
-//                         EXTRACT(
-//                             EPOCH
-//                             FROM (
-//                                 tk.check_out
-//                                 -
-//                                 tk.check_in
-//                             )
-//                         )
-//                         /
-//                         3600
-//                     ) >= 2.5
-
-//                     AND (
-//                         EXTRACT(
-//                             EPOCH
-//                             FROM (
-//                                 tk.check_out
-//                                 -
-//                                 tk.check_in
-//                             )
-//                         )
-//                         /
-//                         3600
-//                     ) < 6.0
+exports.syncPayrollAttendance = async (req, res) => {
+  const transaction = await sequelize.transaction();
+
+  try {
+    const { payroll_period_id } = req.body;
+
+    if (!payroll_period_id) {
+      await transaction.rollback();
+
+      return res.status(400).json({
+        success: false,
+
+        message: "Thiếu payroll_period_id",
+      });
+    }
+
+    // ======================================================
+    // 1. KỲ LƯƠNG
+    // ======================================================
+
+    const period = await PayrollPeriod.findByPk(payroll_period_id, {
+      transaction,
+    });
+
+    if (!period) {
+      await transaction.rollback();
+
+      return res.status(404).json({
+        success: false,
+
+        message: "Không tìm thấy kỳ lương",
+      });
+    }
+
+    if (["PUBLISHED", "CLOSED"].includes(period.status)) {
+      await transaction.rollback();
+
+      return res.status(400).json({
+        success: false,
+
+        message: "Kỳ lương đã khóa",
+      });
+    }
+
+    // ======================================================
+    // 2. TÍNH CÔNG CHUẨN FULL-TIME
+    // ======================================================
+
+    const fullTimeStandardDays = calculateFullTimeStandardDays(
+      period.start_date,
+      period.end_date,
+    );
+
+    // ======================================================
+    // 3. QUERY CHẤM CÔNG
+    // ======================================================
+
+    const attendanceData = await sequelize.query(
+      `
+        SELECT
+            u.user_id,
+            u.name,
+
+            SUM(
+                CASE
+
+                    WHEN (
+                        EXTRACT(
+                            EPOCH
+                            FROM (
+                                tk.check_out
+                                -
+                                tk.check_in
+                            )
+                        )
+                        /
+                        3600
+                    ) >= 6.0
+
+                    THEN 1.0
+
+                    WHEN (
+                        EXTRACT(
+                            EPOCH
+                            FROM (
+                                tk.check_out
+                                -
+                                tk.check_in
+                            )
+                        )
+                        /
+                        3600
+                    ) >= 2.5
+
+                    AND (
+                        EXTRACT(
+                            EPOCH
+                            FROM (
+                                tk.check_out
+                                -
+                                tk.check_in
+                            )
+                        )
+                        /
+                        3600
+                    ) < 6.0
 
-//                     THEN 0.5
+                    THEN 0.5
 
-//                     ELSE 0.0
+                    ELSE 0.0
 
-//                 END
-//             )::numeric(10,2)
-//             AS attendance_work_days
+                END
+            )::numeric(10,2)
+            AS attendance_work_days
 
-//         FROM
-//             timekeeping.tk_attendance tk
+        FROM
+            timekeeping.tk_attendance tk
 
-//         JOIN
-//             mdm.users u
+        JOIN
+            mdm.users u
 
-//             ON u.user_id =
-//                tk.user_id
+            ON u.user_id =
+               tk.user_id
 
-//         WHERE
-//             tk.work_date
-//             BETWEEN
-//                 :startDate
-//                 AND
-//                 :endDate
+        WHERE
+            tk.work_date
+            BETWEEN
+                :startDate
+                AND
+                :endDate
 
-//             AND tk.check_in
-//                 IS NOT NULL
+            AND tk.check_in
+                IS NOT NULL
 
-//             AND tk.check_out
-//                 IS NOT NULL
+            AND tk.check_out
+                IS NOT NULL
 
-//             AND COALESCE(
-//                 u.status,
-//                 1
-//             ) = 1
+            AND COALESCE(
+                u.status,
+                1
+            ) = 1
 
-//         GROUP BY
-//             u.user_id,
-//             u.name
+        GROUP BY
+            u.user_id,
+            u.name
 
-//         ORDER BY
-//             u.user_id ASC
-//         `,
-//       {
-//         replacements: {
-//           startDate: period.start_date,
+        ORDER BY
+            u.user_id ASC
+        `,
+      {
+        replacements: {
+          startDate: period.start_date,
 
-//           endDate: period.end_date,
-//         },
+          endDate: period.end_date,
+        },
 
-//         type: QueryTypes.SELECT,
+        type: QueryTypes.SELECT,
 
-//         transaction,
-//       },
-//     );
+        transaction,
+      },
+    );
 
-//     if (attendanceData.length === 0) {
-//       await transaction.rollback();
+    if (attendanceData.length === 0) {
+      await transaction.rollback();
 
-//       return res.status(400).json({
-//         success: false,
+      return res.status(400).json({
+        success: false,
 
-//         message: "Không tìm thấy dữ liệu chấm công trong kỳ",
-//       });
-//     }
+        message: "Không tìm thấy dữ liệu chấm công trong kỳ",
+      });
+    }
 
-//     let createdCount = 0;
+    let createdCount = 0;
 
-//     let updatedCount = 0;
+    let updatedCount = 0;
 
-//     let unchangedCount = 0;
+    let unchangedCount = 0;
 
-//     let skippedCount = 0;
+    let skippedCount = 0;
 
-//     const result = [];
+    const result = [];
 
-//     // ======================================================
-//     // 4. LOOP NHÂN VIÊN
-//     // ======================================================
+    // ======================================================
+    // 4. LOOP NHÂN VIÊN
+    // ======================================================
 
-//     for (const item of attendanceData) {
-//       const userId = Number(item.user_id);
+    for (const item of attendanceData) {
+      const userId = Number(item.user_id);
 
-//       const actualWorkDays = Number(item.attendance_work_days || 0);
+      const actualWorkDays = Number(item.attendance_work_days || 0);
 
-//       // ====================================================
-//       // SALARY CONFIG
-//       // ====================================================
+      // ====================================================
+      // SALARY CONFIG
+      // ====================================================
 
-//       const salaryConfig = await getActiveSalaryConfig(
-//         userId,
-//         period.end_date,
-//         transaction,
-//       );
+      const salaryConfig = await getActiveSalaryConfig(
+        userId,
+        period.end_date,
+        transaction,
+      );
 
-//       if (!salaryConfig) {
-//         //console.log(`[PAYROLL] User ${userId} chưa có cấu hình lương`);
+      if (!salaryConfig) {
+        //console.log(`[PAYROLL] User ${userId} chưa có cấu hình lương`);
 
-//         skippedCount += 1;
+        skippedCount += 1;
 
-//         continue;
-//       }
+        continue;
+      }
 
-//       const employeeType = String(salaryConfig.employee_type || "")
-//         .trim()
-//         .toUpperCase();
+      const employeeType = String(salaryConfig.employee_type || "")
+        .trim()
+        .toUpperCase();
 
-//       // ====================================================
-//       // CÔNG CHUẨN RIÊNG
-//       // ====================================================
+      // ====================================================
+      // CÔNG CHUẨN RIÊNG
+      // ====================================================
 
-//       const standardWorkDays = resolveStandardWorkDays({
-//         employeeType,
+      const standardWorkDays = resolveStandardWorkDays({
+        employeeType,
 
-//         fullTimeStandardDays,
-//       });
+        fullTimeStandardDays,
+      });
 
-//       if (standardWorkDays === null) {
-//         console.log(
-//           `[PAYROLL] employee_type không hỗ trợ: user=${userId}, type=${employeeType}`,
-//         );
+      if (standardWorkDays === null) {
+        console.log(
+          `[PAYROLL] employee_type không hỗ trợ: user=${userId}, type=${employeeType}`,
+        );
 
-//         skippedCount += 1;
+        skippedCount += 1;
 
-//         continue;
-//       }
+        continue;
+      }
 
-//       console.log("[PAYROLL SYNC]", {
-//         userId,
+      console.log("[PAYROLL SYNC]", {
+        userId,
 
-//         employeeType,
+        employeeType,
 
-//         standardWorkDays,
+        standardWorkDays,
 
-//         actualWorkDays,
-//       });
+        actualWorkDays,
+      });
 
-//       // ====================================================
-//       // ATTENDANCE HIỆN TẠI
-//       // ====================================================
+      // ====================================================
+      // ATTENDANCE HIỆN TẠI
+      // ====================================================
 
-//       const existing = await PayrollAttendance.findOne({
-//         where: {
-//           payroll_period_id,
+      const existing = await PayrollAttendance.findOne({
+        where: {
+          payroll_period_id,
 
-//           user_id: userId,
-//         },
+          user_id: userId,
+        },
 
-//         transaction,
+        transaction,
 
-//         lock: transaction.LOCK.UPDATE,
-//       });
+        lock: transaction.LOCK.UPDATE,
+      });
 
-//       // ====================================================
-//       // CREATE
-//       // ====================================================
+      // ====================================================
+      // CREATE
+      // ====================================================
 
-//       if (!existing) {
-//         const attendance = await PayrollAttendance.create(
-//           {
-//             payroll_period_id,
+      if (!existing) {
+        const attendance = await PayrollAttendance.create(
+          {
+            payroll_period_id,
 
-//             user_id: userId,
+            user_id: userId,
 
-//             standard_work_days: standardWorkDays,
+            standard_work_days: standardWorkDays,
 
-//             attendance_work_days: actualWorkDays,
+            attendance_work_days: actualWorkDays,
 
-//             adjustment_work_days: 0,
+            adjustment_work_days: 0,
 
-//             confirmed_work_days: actualWorkDays,
+            confirmed_work_days: actualWorkDays,
 
-//             attendance_version: 1,
+            attendance_version: 1,
 
-//             status: "DRAFT",
+            status: "DRAFT",
 
-//             confirmed_by: null,
+            confirmed_by: null,
 
-//             confirmed_at: null,
+            confirmed_at: null,
 
-//             created_at: new Date(),
-//           },
-//           {
-//             transaction,
-//           },
-//         );
+            created_at: new Date(),
+          },
+          {
+            transaction,
+          },
+        );
 
-//         createdCount += 1;
+        createdCount += 1;
 
-//         result.push(attendance);
+        result.push(attendance);
 
-//         continue;
-//       }
+        continue;
+      }
 
-//       // ====================================================
-//       // SO SÁNH
-//       // ====================================================
+      // ====================================================
+      // SO SÁNH
+      // ====================================================
 
-//       const oldStandard = Number(existing.standard_work_days || 0);
+      const oldStandard = Number(existing.standard_work_days || 0);
 
-//       const oldActual = Number(existing.attendance_work_days || 0);
+      const oldActual = Number(existing.attendance_work_days || 0);
 
-//       const standardChanged = oldStandard !== standardWorkDays;
+      const standardChanged = oldStandard !== standardWorkDays;
 
-//       const attendanceChanged = oldActual !== actualWorkDays;
+      const attendanceChanged = oldActual !== actualWorkDays;
 
-//       if (!standardChanged && !attendanceChanged) {
-//         unchangedCount += 1;
+      if (!standardChanged && !attendanceChanged) {
+        unchangedCount += 1;
 
-//         result.push(existing);
+        result.push(existing);
 
-//         continue;
-//       }
+        continue;
+      }
 
-//       // ====================================================
-//       // UPDATE
-//       // ====================================================
+      // ====================================================
+      // UPDATE
+      // ====================================================
 
-//       const adjustment = Number(existing.adjustment_work_days || 0);
+      const adjustment = Number(existing.adjustment_work_days || 0);
 
-//       const newConfirmed = actualWorkDays + adjustment;
+      const newConfirmed = actualWorkDays + adjustment;
 
-//       const newVersion = Number(existing.attendance_version || 0) + 1;
+      const newVersion = Number(existing.attendance_version || 0) + 1;
 
-//       await existing.update(
-//         {
-//           standard_work_days: standardWorkDays,
+      await existing.update(
+        {
+          standard_work_days: standardWorkDays,
 
-//           attendance_work_days: actualWorkDays,
+          attendance_work_days: actualWorkDays,
 
-//           confirmed_work_days: newConfirmed,
+          confirmed_work_days: newConfirmed,
 
-//           attendance_version: newVersion,
+          attendance_version: newVersion,
 
-//           status: existing.status === "DRAFT" ? "DRAFT" : "CHANGED",
+          status: existing.status === "DRAFT" ? "DRAFT" : "CHANGED",
 
-//           confirmed_by:
-//             existing.status === "DRAFT" ? existing.confirmed_by : null,
+          confirmed_by:
+            existing.status === "DRAFT" ? existing.confirmed_by : null,
 
-//           confirmed_at:
-//             existing.status === "DRAFT" ? existing.confirmed_at : null,
+          confirmed_at:
+            existing.status === "DRAFT" ? existing.confirmed_at : null,
 
-//           updated_at: new Date(),
-//         },
-//         {
-//           transaction,
-//         },
-//       );
+          updated_at: new Date(),
+        },
+        {
+          transaction,
+        },
+      );
 
-//       // ====================================================
-//       // PAYROLL ĐÃ TÍNH -> OUTDATED
-//       // ====================================================
+      // ====================================================
+      // PAYROLL ĐÃ TÍNH -> OUTDATED
+      // ====================================================
 
-//       await EmployeePayroll.update(
-//         {
-//           status: "OUTDATED",
+      await EmployeePayroll.update(
+        {
+          status: "OUTDATED",
 
-//           updated_at: new Date(),
-//         },
-//         {
-//           where: {
-//             payroll_period_id,
+          updated_at: new Date(),
+        },
+        {
+          where: {
+            payroll_period_id,
 
-//             user_id: userId,
-//           },
+            user_id: userId,
+          },
 
-//           transaction,
-//         },
-//       );
+          transaction,
+        },
+      );
 
-//       // ====================================================
-//       // LOG
-//       // ====================================================
+      // ====================================================
+      // LOG
+      // ====================================================
 
-//       await PayrollLog.create(
-//         {
-//           payroll_period_id,
+      await PayrollLog.create(
+        {
+          payroll_period_id,
 
-//           user_id: userId,
+          user_id: userId,
 
-//           action: "SYNC_ATTENDANCE",
+          action: "SYNC_ATTENDANCE",
 
-//           old_data: {
-//             standard_work_days: oldStandard,
+          old_data: {
+            standard_work_days: oldStandard,
 
-//             attendance_work_days: oldActual,
+            attendance_work_days: oldActual,
 
-//             attendance_version: Number(existing.attendance_version || 0) - 1,
-//           },
+            attendance_version: Number(existing.attendance_version || 0) - 1,
+          },
 
-//           new_data: {
-//             employee_type: employeeType,
+          new_data: {
+            employee_type: employeeType,
 
-//             standard_work_days: standardWorkDays,
+            standard_work_days: standardWorkDays,
 
-//             attendance_work_days: actualWorkDays,
+            attendance_work_days: actualWorkDays,
 
-//             confirmed_work_days: newConfirmed,
+            confirmed_work_days: newConfirmed,
 
-//             attendance_version: newVersion,
-//           },
+            attendance_version: newVersion,
+          },
 
-//           description: "Cập nhật dữ liệu từ hệ thống chấm công",
+          description: "Cập nhật dữ liệu từ hệ thống chấm công",
 
-//           created_by: req.user?.user_id || null,
-//         },
-//         {
-//           transaction,
-//         },
-//       );
+          created_by: req.user?.user_id || null,
+        },
+        {
+          transaction,
+        },
+      );
 
-//       updatedCount += 1;
+      updatedCount += 1;
 
-//       result.push(existing);
-//     }
+      result.push(existing);
+    }
 
-//     // ======================================================
-//     // 5. NẾU CÓ THAY ĐỔI -> PERIOD VỀ OPEN
-//     // ======================================================
+    // ======================================================
+    // 5. NẾU CÓ THAY ĐỔI -> PERIOD VỀ OPEN
+    // ======================================================
 
-//     if (createdCount > 0 || updatedCount > 0) {
-//       await period.update(
-//         {
-//           status: "OPEN",
-//         },
-//         {
-//           transaction,
-//         },
-//       );
-//     }
+    if (createdCount > 0 || updatedCount > 0) {
+      await period.update(
+        {
+          status: "OPEN",
+        },
+        {
+          transaction,
+        },
+      );
+    }
 
-//     await transaction.commit();
+    await transaction.commit();
 
-//     return res.json({
-//       success: true,
+    return res.json({
+      success: true,
 
-//       message:
-//         `Đồng bộ công thành công. ` +
-//         `Thêm mới: ${createdCount}, ` +
-//         `cập nhật: ${updatedCount}, ` +
-//         `không đổi: ${unchangedCount}, ` +
-//         `bỏ qua: ${skippedCount}.`,
+      message:
+        `Đồng bộ công thành công. ` +
+        `Thêm mới: ${createdCount}, ` +
+        `cập nhật: ${updatedCount}, ` +
+        `không đổi: ${unchangedCount}, ` +
+        `bỏ qua: ${skippedCount}.`,
 
-//       data: {
-//         created: createdCount,
+      data: {
+        created: createdCount,
 
-//         updated: updatedCount,
+        updated: updatedCount,
 
-//         unchanged: unchangedCount,
+        unchanged: unchangedCount,
 
-//         skipped: skippedCount,
+        skipped: skippedCount,
 
-//         total: attendanceData.length,
+        total: attendanceData.length,
 
-//         full_time_standard_days: fullTimeStandardDays,
+        full_time_standard_days: fullTimeStandardDays,
 
-//         result,
-//       },
-//     });
-//   } catch (error) {
-//     await transaction.rollback();
+        result,
+      },
+    });
+  } catch (error) {
+    await transaction.rollback();
 
-//     console.error("syncPayrollAttendance:", error);
+    console.error("syncPayrollAttendance:", error);
 
-//     return res.status(500).json({
-//       success: false,
+    return res.status(500).json({
+      success: false,
 
-//       message: "Không thể đồng bộ dữ liệu chấm công",
+      message: "Không thể đồng bộ dữ liệu chấm công",
 
-//       error: error.message,
-//     });
-//   }
-// };
+      error: error.message,
+    });
+  }
+};
 
 // ==========================================================
 // SYNC DỮ LIỆU CHẤM CÔNG
@@ -765,724 +765,724 @@ exports.getPayrollAttendances = async (req, res) => {
 // => 12 công
 // ==========================================================
 
-exports.syncPayrollAttendance = async (req, res) => {
-  const transaction = await sequelize.transaction();
-
-  try {
-    const { payroll_period_id } = req.body;
-
-    // ======================================================
-    // 1. VALIDATE
-    // ======================================================
-
-    if (!payroll_period_id) {
-      await transaction.rollback();
-
-      return res.status(400).json({
-        success: false,
-
-        message: "Thiếu payroll_period_id",
-      });
-    }
-
-    // ======================================================
-    // 2. LẤY KỲ LƯƠNG
-    // ======================================================
-
-    const period = await PayrollPeriod.findByPk(payroll_period_id, {
-      transaction,
-    });
-
-    if (!period) {
-      await transaction.rollback();
-
-      return res.status(404).json({
-        success: false,
-
-        message: "Không tìm thấy kỳ lương",
-      });
-    }
-
-    // ======================================================
-    // KHÔNG CHO SYNC KỲ ĐÃ KHÓA
-    // ======================================================
-
-    if (["PUBLISHED", "CLOSED"].includes(period.status)) {
-      await transaction.rollback();
-
-      return res.status(400).json({
-        success: false,
-
-        message: "Kỳ lương đã công bố hoặc đã đóng, không thể cập nhật công",
-      });
-    }
-
-    // ======================================================
-    // 3. TÍNH CÔNG CHUẨN FULL-TIME
-    //
-    // T2 -> T6
-    // ======================================================
-
-    const startDate = new Date(`${period.start_date}T00:00:00`);
-
-    const endDate = new Date(`${period.end_date}T00:00:00`);
-
-    let fullTimeStandardDays = 0;
-
-    const currentDate = new Date(startDate);
-
-    while (currentDate <= endDate) {
-      const day = currentDate.getDay();
-
-      // 1 = T2
-      // ...
-      // 5 = T6
-
-      if (day >= 1 && day <= 5) {
-        fullTimeStandardDays += 1;
-      }
-
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
-
-    // ======================================================
-    // 4. QUERY DỮ LIỆU CHẤM CÔNG
-    //
-    // QUY TẮC:
-    //
-    // chỉ tính phần thời gian giao với:
-    //
-    // 09:00 -> 12:00
-    // 13:00 -> 17:00
-    //
-    // Không tính:
-    // - trước 09:00
-    // - 12:00 -> 13:00
-    // - sau 17:00
-    //
-    // daily_work_hours:
-    // giờ hợp lệ từng ngày
-    //
-    // attendance_work_days:
-    // tổng giờ / 7
-    // ======================================================
-
-    const attendanceData = await sequelize.query(
-      `
-    WITH daily_attendance AS (
-        SELECT
-            tk.user_id,
-            tk.work_date,
-
-            -- ==========================================
-            -- BUỔI SÁNG
-            -- CHỈ TÍNH 09:00 -> 12:00
-            -- ==========================================
-
-            CASE
-                WHEN
-                    tk.check_out::time > TIME '09:00:00'
-                    AND
-                    tk.check_in::time < TIME '12:00:00'
-
-                THEN
-                    GREATEST(
-                        0,
-
-                        EXTRACT(
-                            EPOCH FROM (
-                                LEAST(
-                                    tk.check_out::time,
-                                    TIME '12:00:00'
-                                )
-                                -
-                                GREATEST(
-                                    tk.check_in::time,
-                                    TIME '09:00:00'
-                                )
-                            )
-                        ) / 3600.0
-                    )
-
-                ELSE 0
-            END
-
-            +
-
-            -- ==========================================
-            -- BUỔI CHIỀU
-            -- CHỈ TÍNH 13:00 -> 17:00
-            -- ==========================================
-
-            CASE
-                WHEN
-                    tk.check_out::time > TIME '13:00:00'
-                    AND
-                    tk.check_in::time < TIME '17:00:00'
-
-                THEN
-                    GREATEST(
-                        0,
-
-                        EXTRACT(
-                            EPOCH FROM (
-                                LEAST(
-                                    tk.check_out::time,
-                                    TIME '17:00:00'
-                                )
-                                -
-                                GREATEST(
-                                    tk.check_in::time,
-                                    TIME '13:00:00'
-                                )
-                            )
-                        ) / 3600.0
-                    )
-
-                ELSE 0
-            END
-
-            AS valid_work_hours
-
-        FROM
-            timekeeping.tk_attendance tk
-
-        WHERE
-            tk.work_date
-            BETWEEN
-                :startDate
-                AND
-                :endDate
-
-            AND tk.check_in IS NOT NULL
-            AND tk.check_out IS NOT NULL
-    ),
-
-    employee_hours AS (
-        SELECT
-            user_id,
-
-            SUM(
-                LEAST(
-                    valid_work_hours,
-                    7.0
-                )
-            )::numeric(12,2)
-            AS total_work_hours
-
-        FROM daily_attendance
-
-        GROUP BY user_id
-    )
-
-    SELECT
-        u.user_id,
-
-        u.name,
-
-        eh.total_work_hours,
-
-        ROUND(
-            (
-                eh.total_work_hours
-                /
-                7.0
-            )::numeric,
-            3
-        )
-        AS attendance_work_days
-
-    FROM employee_hours eh
-
-    JOIN mdm.users u
-        ON u.user_id =
-           eh.user_id
-
-    WHERE
-        COALESCE(
-            u.status,
-            1
-        ) = 1
-
-    ORDER BY
-        u.user_id ASC
-    `,
-      {
-        replacements: {
-          startDate: period.start_date,
-
-          endDate: period.end_date,
-        },
-
-        type: QueryTypes.SELECT,
-
-        transaction,
-      },
-    );
-
-    // ======================================================
-    // KHÔNG CÓ DỮ LIỆU
-    // ======================================================
-
-    if (attendanceData.length === 0) {
-      await transaction.rollback();
-
-      return res.status(400).json({
-        success: false,
-
-        message: "Không tìm thấy dữ liệu chấm công trong kỳ",
-      });
-    }
-
-    // ======================================================
-    // COUNTER
-    // ======================================================
-
-    let createdCount = 0;
-
-    let updatedCount = 0;
-
-    let unchangedCount = 0;
-
-    let skippedCount = 0;
-
-    const result = [];
-
-    // ======================================================
-    // 5. LOOP NHÂN VIÊN
-    // ======================================================
-
-    for (const item of attendanceData) {
-      const userId = Number(item.user_id);
-
-      const totalWorkHours = Number(item.total_work_hours || 0);
-
-      const actualWorkDays = Number(item.attendance_work_days || 0);
-
-      // ====================================================
-      // 6. TÌM CẤU HÌNH LƯƠNG ĐANG CÓ HIỆU LỰC
-      // ====================================================
-
-      const salaryConfig = await UserSalaryConfig.findOne({
-        where: {
-          user_id: userId,
-
-          status: 1,
+// exports.syncPayrollAttendance = async (req, res) => {
+//   const transaction = await sequelize.transaction();
+
+//   try {
+//     const { payroll_period_id } = req.body;
+
+//     // ======================================================
+//     // 1. VALIDATE
+//     // ======================================================
+
+//     if (!payroll_period_id) {
+//       await transaction.rollback();
+
+//       return res.status(400).json({
+//         success: false,
+
+//         message: "Thiếu payroll_period_id",
+//       });
+//     }
+
+//     // ======================================================
+//     // 2. LẤY KỲ LƯƠNG
+//     // ======================================================
+
+//     const period = await PayrollPeriod.findByPk(payroll_period_id, {
+//       transaction,
+//     });
+
+//     if (!period) {
+//       await transaction.rollback();
+
+//       return res.status(404).json({
+//         success: false,
+
+//         message: "Không tìm thấy kỳ lương",
+//       });
+//     }
+
+//     // ======================================================
+//     // KHÔNG CHO SYNC KỲ ĐÃ KHÓA
+//     // ======================================================
+
+//     if (["PUBLISHED", "CLOSED"].includes(period.status)) {
+//       await transaction.rollback();
+
+//       return res.status(400).json({
+//         success: false,
+
+//         message: "Kỳ lương đã công bố hoặc đã đóng, không thể cập nhật công",
+//       });
+//     }
+
+//     // ======================================================
+//     // 3. TÍNH CÔNG CHUẨN FULL-TIME
+//     //
+//     // T2 -> T6
+//     // ======================================================
+
+//     const startDate = new Date(`${period.start_date}T00:00:00`);
+
+//     const endDate = new Date(`${period.end_date}T00:00:00`);
+
+//     let fullTimeStandardDays = 0;
+
+//     const currentDate = new Date(startDate);
+
+//     while (currentDate <= endDate) {
+//       const day = currentDate.getDay();
+
+//       // 1 = T2
+//       // ...
+//       // 5 = T6
+
+//       if (day >= 1 && day <= 5) {
+//         fullTimeStandardDays += 1;
+//       }
+
+//       currentDate.setDate(currentDate.getDate() + 1);
+//     }
+
+//     // ======================================================
+//     // 4. QUERY DỮ LIỆU CHẤM CÔNG
+//     //
+//     // QUY TẮC:
+//     //
+//     // chỉ tính phần thời gian giao với:
+//     //
+//     // 09:00 -> 12:00
+//     // 13:00 -> 17:00
+//     //
+//     // Không tính:
+//     // - trước 09:00
+//     // - 12:00 -> 13:00
+//     // - sau 17:00
+//     //
+//     // daily_work_hours:
+//     // giờ hợp lệ từng ngày
+//     //
+//     // attendance_work_days:
+//     // tổng giờ / 7
+//     // ======================================================
+
+//     const attendanceData = await sequelize.query(
+//       `
+//     WITH daily_attendance AS (
+//         SELECT
+//             tk.user_id,
+//             tk.work_date,
+
+//             -- ==========================================
+//             -- BUỔI SÁNG
+//             -- CHỈ TÍNH 09:00 -> 12:00
+//             -- ==========================================
+
+//             CASE
+//                 WHEN
+//                     tk.check_out::time > TIME '09:00:00'
+//                     AND
+//                     tk.check_in::time < TIME '12:00:00'
+
+//                 THEN
+//                     GREATEST(
+//                         0,
+
+//                         EXTRACT(
+//                             EPOCH FROM (
+//                                 LEAST(
+//                                     tk.check_out::time,
+//                                     TIME '12:00:00'
+//                                 )
+//                                 -
+//                                 GREATEST(
+//                                     tk.check_in::time,
+//                                     TIME '09:00:00'
+//                                 )
+//                             )
+//                         ) / 3600.0
+//                     )
+
+//                 ELSE 0
+//             END
+
+//             +
+
+//             -- ==========================================
+//             -- BUỔI CHIỀU
+//             -- CHỈ TÍNH 13:00 -> 17:00
+//             -- ==========================================
+
+//             CASE
+//                 WHEN
+//                     tk.check_out::time > TIME '13:00:00'
+//                     AND
+//                     tk.check_in::time < TIME '17:00:00'
+
+//                 THEN
+//                     GREATEST(
+//                         0,
+
+//                         EXTRACT(
+//                             EPOCH FROM (
+//                                 LEAST(
+//                                     tk.check_out::time,
+//                                     TIME '17:00:00'
+//                                 )
+//                                 -
+//                                 GREATEST(
+//                                     tk.check_in::time,
+//                                     TIME '13:00:00'
+//                                 )
+//                             )
+//                         ) / 3600.0
+//                     )
+
+//                 ELSE 0
+//             END
+
+//             AS valid_work_hours
+
+//         FROM
+//             timekeeping.tk_attendance tk
+
+//         WHERE
+//             tk.work_date
+//             BETWEEN
+//                 :startDate
+//                 AND
+//                 :endDate
+
+//             AND tk.check_in IS NOT NULL
+//             AND tk.check_out IS NOT NULL
+//     ),
+
+//     employee_hours AS (
+//         SELECT
+//             user_id,
+
+//             SUM(
+//                 LEAST(
+//                     valid_work_hours,
+//                     7.0
+//                 )
+//             )::numeric(12,2)
+//             AS total_work_hours
+
+//         FROM daily_attendance
+
+//         GROUP BY user_id
+//     )
+
+//     SELECT
+//         u.user_id,
+
+//         u.name,
+
+//         eh.total_work_hours,
+
+//         ROUND(
+//             (
+//                 eh.total_work_hours
+//                 /
+//                 7.0
+//             )::numeric,
+//             3
+//         )
+//         AS attendance_work_days
+
+//     FROM employee_hours eh
+
+//     JOIN mdm.users u
+//         ON u.user_id =
+//            eh.user_id
+
+//     WHERE
+//         COALESCE(
+//             u.status,
+//             1
+//         ) = 1
+
+//     ORDER BY
+//         u.user_id ASC
+//     `,
+//       {
+//         replacements: {
+//           startDate: period.start_date,
+
+//           endDate: period.end_date,
+//         },
+
+//         type: QueryTypes.SELECT,
+
+//         transaction,
+//       },
+//     );
+
+//     // ======================================================
+//     // KHÔNG CÓ DỮ LIỆU
+//     // ======================================================
+
+//     if (attendanceData.length === 0) {
+//       await transaction.rollback();
+
+//       return res.status(400).json({
+//         success: false,
+
+//         message: "Không tìm thấy dữ liệu chấm công trong kỳ",
+//       });
+//     }
+
+//     // ======================================================
+//     // COUNTER
+//     // ======================================================
+
+//     let createdCount = 0;
+
+//     let updatedCount = 0;
+
+//     let unchangedCount = 0;
+
+//     let skippedCount = 0;
+
+//     const result = [];
+
+//     // ======================================================
+//     // 5. LOOP NHÂN VIÊN
+//     // ======================================================
+
+//     for (const item of attendanceData) {
+//       const userId = Number(item.user_id);
+
+//       const totalWorkHours = Number(item.total_work_hours || 0);
+
+//       const actualWorkDays = Number(item.attendance_work_days || 0);
+
+//       // ====================================================
+//       // 6. TÌM CẤU HÌNH LƯƠNG ĐANG CÓ HIỆU LỰC
+//       // ====================================================
+
+//       const salaryConfig = await UserSalaryConfig.findOne({
+//         where: {
+//           user_id: userId,
+
+//           status: 1,
 
-          effective_from: {
-            [Op.lte]: period.end_date,
-          },
+//           effective_from: {
+//             [Op.lte]: period.end_date,
+//           },
 
-          [Op.or]: [
-            {
-              effective_to: null,
-            },
+//           [Op.or]: [
+//             {
+//               effective_to: null,
+//             },
 
-            {
-              effective_to: {
-                [Op.gte]: period.end_date,
-              },
-            },
-          ],
-        },
+//             {
+//               effective_to: {
+//                 [Op.gte]: period.end_date,
+//               },
+//             },
+//           ],
+//         },
 
-        order: [["effective_from", "DESC"]],
+//         order: [["effective_from", "DESC"]],
 
-        transaction,
-      });
+//         transaction,
+//       });
 
-      // ====================================================
-      // CHƯA KHAI BÁO LƯƠNG
-      // ====================================================
+//       // ====================================================
+//       // CHƯA KHAI BÁO LƯƠNG
+//       // ====================================================
 
-      if (!salaryConfig) {
-        //console.log(`[PAYROLL] User ${userId} chưa có cấu hình lương`);
+//       if (!salaryConfig) {
+//         //console.log(`[PAYROLL] User ${userId} chưa có cấu hình lương`);
 
-        skippedCount += 1;
+//         skippedCount += 1;
 
-        continue;
-      }
+//         continue;
+//       }
 
-      // ====================================================
-      // 7. LOẠI NHÂN SỰ
-      // ====================================================
+//       // ====================================================
+//       // 7. LOẠI NHÂN SỰ
+//       // ====================================================
 
-      const employeeType = String(salaryConfig.employee_type || "")
-        .trim()
-        .toUpperCase();
+//       const employeeType = String(salaryConfig.employee_type || "")
+//         .trim()
+//         .toUpperCase();
 
-      // ====================================================
-      // 8. TÍNH CÔNG CHUẨN
-      // ====================================================
+//       // ====================================================
+//       // 8. TÍNH CÔNG CHUẨN
+//       // ====================================================
 
-      let standardWorkDays = null;
+//       let standardWorkDays = null;
 
-      // ================================================
-      // NHÂN VIÊN CHÍNH THỨC
-      // ================================================
+//       // ================================================
+//       // NHÂN VIÊN CHÍNH THỨC
+//       // ================================================
 
-      if (employeeType === "OFFICIAL" || employeeType === "PROBATION") {
-        standardWorkDays = fullTimeStandardDays;
-      }
+//       if (employeeType === "OFFICIAL" || employeeType === "PROBATION") {
+//         standardWorkDays = fullTimeStandardDays;
+//       }
 
-      // ================================================
-      // THỰC TẬP / PART-TIME
-      // ================================================
-      else if (employeeType === "INTERN" || employeeType === "PART_TIME") {
-        standardWorkDays = 12;
-      }
+//       // ================================================
+//       // THỰC TẬP / PART-TIME
+//       // ================================================
+//       else if (employeeType === "INTERN" || employeeType === "PART_TIME") {
+//         standardWorkDays = 12;
+//       }
 
-      // ================================================
-      // CỘNG TÁC VIÊN
-      // ================================================
-      else if (employeeType === "COLLABORATOR") {
-        standardWorkDays = 12;
-      }
+//       // ================================================
+//       // CỘNG TÁC VIÊN
+//       // ================================================
+//       else if (employeeType === "COLLABORATOR") {
+//         standardWorkDays = 12;
+//       }
 
-      // ================================================
-      // KHÔNG NHẬN DIỆN
-      // ================================================
+//       // ================================================
+//       // KHÔNG NHẬN DIỆN
+//       // ================================================
 
-      if (standardWorkDays === null) {
-        console.log(
-          `[PAYROLL] Không xác định được loại nhân sự của user ${userId}: ${employeeType}`,
-        );
+//       if (standardWorkDays === null) {
+//         console.log(
+//           `[PAYROLL] Không xác định được loại nhân sự của user ${userId}: ${employeeType}`,
+//         );
 
-        skippedCount += 1;
+//         skippedCount += 1;
 
-        continue;
-      }
+//         continue;
+//       }
 
-      // ====================================================
-      // DEBUG
-      // ====================================================
+//       // ====================================================
+//       // DEBUG
+//       // ====================================================
 
-      // console.log("[PAYROLL SYNC]", {
-      //   userId,
+//       // console.log("[PAYROLL SYNC]", {
+//       //   userId,
 
-      //   name: item.name,
+//       //   name: item.name,
 
-      //   employeeType,
+//       //   employeeType,
 
-      //   standardWorkDays,
+//       //   standardWorkDays,
 
-      //   totalWorkHours,
+//       //   totalWorkHours,
 
-      //   actualWorkDays,
-      // });
+//       //   actualWorkDays,
+//       // });
 
-      // ====================================================
-      // 9. TÌM RECORD CÔNG HIỆN TẠI
-      // ====================================================
+//       // ====================================================
+//       // 9. TÌM RECORD CÔNG HIỆN TẠI
+//       // ====================================================
 
-      const existing = await PayrollAttendance.findOne({
-        where: {
-          payroll_period_id: payroll_period_id,
+//       const existing = await PayrollAttendance.findOne({
+//         where: {
+//           payroll_period_id: payroll_period_id,
 
-          user_id: userId,
-        },
+//           user_id: userId,
+//         },
 
-        transaction,
+//         transaction,
 
-        lock: transaction.LOCK.UPDATE,
-      });
+//         lock: transaction.LOCK.UPDATE,
+//       });
 
-      // ====================================================
-      // 10. CHƯA CÓ -> CREATE
-      // ====================================================
+//       // ====================================================
+//       // 10. CHƯA CÓ -> CREATE
+//       // ====================================================
 
-      if (!existing) {
-        const attendance = await PayrollAttendance.create(
-          {
-            payroll_period_id: payroll_period_id,
+//       if (!existing) {
+//         const attendance = await PayrollAttendance.create(
+//           {
+//             payroll_period_id: payroll_period_id,
 
-            user_id: userId,
+//             user_id: userId,
 
-            standard_work_days: standardWorkDays,
+//             standard_work_days: standardWorkDays,
 
-            // ============================================
-            // CÔNG THỰC TẾ ĐÃ QUY ĐỔI THEO GIỜ
-            // ============================================
+//             // ============================================
+//             // CÔNG THỰC TẾ ĐÃ QUY ĐỔI THEO GIỜ
+//             // ============================================
 
-            attendance_work_days: actualWorkDays,
+//             attendance_work_days: actualWorkDays,
 
-            adjustment_work_days: 0,
+//             adjustment_work_days: 0,
 
-            confirmed_work_days: actualWorkDays,
+//             confirmed_work_days: actualWorkDays,
 
-            attendance_version: 1,
+//             attendance_version: 1,
 
-            status: "DRAFT",
+//             status: "DRAFT",
 
-            confirmed_by: null,
+//             confirmed_by: null,
 
-            confirmed_at: null,
+//             confirmed_at: null,
 
-            created_at: new Date(),
-          },
-          {
-            transaction,
-          },
-        );
+//             created_at: new Date(),
+//           },
+//           {
+//             transaction,
+//           },
+//         );
 
-        createdCount += 1;
+//         createdCount += 1;
 
-        result.push({
-          ...attendance.toJSON(),
+//         result.push({
+//           ...attendance.toJSON(),
 
-          employee_type: employeeType,
+//           employee_type: employeeType,
 
-          total_work_hours: totalWorkHours,
-        });
+//           total_work_hours: totalWorkHours,
+//         });
 
-        continue;
-      }
+//         continue;
+//       }
 
-      // ====================================================
-      // 11. SO SÁNH DỮ LIỆU CŨ / MỚI
-      // ====================================================
+//       // ====================================================
+//       // 11. SO SÁNH DỮ LIỆU CŨ / MỚI
+//       // ====================================================
 
-      const oldStandardDays = Number(existing.standard_work_days || 0);
+//       const oldStandardDays = Number(existing.standard_work_days || 0);
 
-      const oldActualDays = Number(existing.attendance_work_days || 0);
+//       const oldActualDays = Number(existing.attendance_work_days || 0);
 
-      const standardChanged = oldStandardDays !== Number(standardWorkDays);
+//       const standardChanged = oldStandardDays !== Number(standardWorkDays);
 
-      const attendanceChanged =
-        Math.abs(oldActualDays - actualWorkDays) > 0.0001;
+//       const attendanceChanged =
+//         Math.abs(oldActualDays - actualWorkDays) > 0.0001;
 
-      // ====================================================
-      // KHÔNG THAY ĐỔI
-      // ====================================================
+//       // ====================================================
+//       // KHÔNG THAY ĐỔI
+//       // ====================================================
 
-      if (!standardChanged && !attendanceChanged) {
-        unchangedCount += 1;
+//       if (!standardChanged && !attendanceChanged) {
+//         unchangedCount += 1;
 
-        result.push({
-          ...existing.toJSON(),
+//         result.push({
+//           ...existing.toJSON(),
 
-          employee_type: employeeType,
+//           employee_type: employeeType,
 
-          total_work_hours: totalWorkHours,
-        });
+//           total_work_hours: totalWorkHours,
+//         });
 
-        continue;
-      }
+//         continue;
+//       }
 
-      // ====================================================
-      // 12. TÍNH LẠI CÔNG SAU ĐIỀU CHỈNH
-      // ====================================================
+//       // ====================================================
+//       // 12. TÍNH LẠI CÔNG SAU ĐIỀU CHỈNH
+//       // ====================================================
 
-      const adjustment = Number(existing.adjustment_work_days || 0);
+//       const adjustment = Number(existing.adjustment_work_days || 0);
 
-      const newConfirmedDays = Number((actualWorkDays + adjustment).toFixed(3));
+//       const newConfirmedDays = Number((actualWorkDays + adjustment).toFixed(3));
 
-      const newVersion = Number(existing.attendance_version || 0) + 1;
+//       const newVersion = Number(existing.attendance_version || 0) + 1;
 
-      const previousStatus = existing.status;
+//       const previousStatus = existing.status;
 
-      // ====================================================
-      // 13. UPDATE ATTENDANCE
-      // ====================================================
+//       // ====================================================
+//       // 13. UPDATE ATTENDANCE
+//       // ====================================================
 
-      await existing.update(
-        {
-          standard_work_days: standardWorkDays,
+//       await existing.update(
+//         {
+//           standard_work_days: standardWorkDays,
 
-          attendance_work_days: actualWorkDays,
+//           attendance_work_days: actualWorkDays,
 
-          adjustment_work_days: adjustment,
+//           adjustment_work_days: adjustment,
 
-          confirmed_work_days: newConfirmedDays,
+//           confirmed_work_days: newConfirmedDays,
 
-          attendance_version: newVersion,
+//           attendance_version: newVersion,
 
-          /*
-           * Nếu đang DRAFT thì vẫn DRAFT.
-           *
-           * Nếu đã CONFIRMED trước đó
-           * mà dữ liệu thay đổi
-           * => CHANGED.
-           */
+//           /*
+//            * Nếu đang DRAFT thì vẫn DRAFT.
+//            *
+//            * Nếu đã CONFIRMED trước đó
+//            * mà dữ liệu thay đổi
+//            * => CHANGED.
+//            */
 
-          status: previousStatus === "DRAFT" ? "DRAFT" : "CHANGED",
+//           status: previousStatus === "DRAFT" ? "DRAFT" : "CHANGED",
 
-          confirmed_by:
-            previousStatus === "DRAFT" ? existing.confirmed_by : null,
+//           confirmed_by:
+//             previousStatus === "DRAFT" ? existing.confirmed_by : null,
 
-          confirmed_at:
-            previousStatus === "DRAFT" ? existing.confirmed_at : null,
+//           confirmed_at:
+//             previousStatus === "DRAFT" ? existing.confirmed_at : null,
 
-          updated_at: new Date(),
-        },
-        {
-          transaction,
-        },
-      );
+//           updated_at: new Date(),
+//         },
+//         {
+//           transaction,
+//         },
+//       );
 
-      // ====================================================
-      // 14. BẢNG LƯƠNG ĐÃ TÍNH -> OUTDATED
-      // ====================================================
+//       // ====================================================
+//       // 14. BẢNG LƯƠNG ĐÃ TÍNH -> OUTDATED
+//       // ====================================================
 
-      await EmployeePayroll.update(
-        {
-          status: "OUTDATED",
+//       await EmployeePayroll.update(
+//         {
+//           status: "OUTDATED",
 
-          updated_at: new Date(),
-        },
-        {
-          where: {
-            payroll_period_id: payroll_period_id,
+//           updated_at: new Date(),
+//         },
+//         {
+//           where: {
+//             payroll_period_id: payroll_period_id,
 
-            user_id: userId,
-          },
+//             user_id: userId,
+//           },
 
-          transaction,
-        },
-      );
+//           transaction,
+//         },
+//       );
 
-      // ====================================================
-      // 15. LOG
-      // ====================================================
+//       // ====================================================
+//       // 15. LOG
+//       // ====================================================
 
-      await PayrollLog.create(
-        {
-          payroll_period_id: payroll_period_id,
+//       await PayrollLog.create(
+//         {
+//           payroll_period_id: payroll_period_id,
 
-          user_id: userId,
+//           user_id: userId,
 
-          action: "SYNC_ATTENDANCE",
+//           action: "SYNC_ATTENDANCE",
 
-          old_data: {
-            standard_work_days: oldStandardDays,
+//           old_data: {
+//             standard_work_days: oldStandardDays,
 
-            attendance_work_days: oldActualDays,
+//             attendance_work_days: oldActualDays,
 
-            attendance_version: Number(existing.attendance_version || 1) - 1,
-          },
+//             attendance_version: Number(existing.attendance_version || 1) - 1,
+//           },
 
-          new_data: {
-            employee_type: employeeType,
+//           new_data: {
+//             employee_type: employeeType,
 
-            standard_work_days: standardWorkDays,
+//             standard_work_days: standardWorkDays,
 
-            total_work_hours: totalWorkHours,
+//             total_work_hours: totalWorkHours,
 
-            attendance_work_days: actualWorkDays,
+//             attendance_work_days: actualWorkDays,
 
-            adjustment_work_days: adjustment,
+//             adjustment_work_days: adjustment,
 
-            confirmed_work_days: newConfirmedDays,
+//             confirmed_work_days: newConfirmedDays,
 
-            attendance_version: newVersion,
-          },
+//             attendance_version: newVersion,
+//           },
 
-          description: "Đồng bộ lại dữ liệu từ hệ thống chấm công",
+//           description: "Đồng bộ lại dữ liệu từ hệ thống chấm công",
 
-          created_by: req.user?.user_id || null,
-        },
-        {
-          transaction,
-        },
-      );
+//           created_by: req.user?.user_id || null,
+//         },
+//         {
+//           transaction,
+//         },
+//       );
 
-      updatedCount += 1;
+//       updatedCount += 1;
 
-      result.push({
-        ...existing.toJSON(),
+//       result.push({
+//         ...existing.toJSON(),
 
-        employee_type: employeeType,
+//         employee_type: employeeType,
 
-        total_work_hours: totalWorkHours,
-      });
-    }
+//         total_work_hours: totalWorkHours,
+//       });
+//     }
 
-    // ======================================================
-    // 16. NẾU CÓ THAY ĐỔI
-    // ĐƯA KỲ VỀ OPEN
-    // ======================================================
+//     // ======================================================
+//     // 16. NẾU CÓ THAY ĐỔI
+//     // ĐƯA KỲ VỀ OPEN
+//     // ======================================================
 
-    if (createdCount > 0 || updatedCount > 0) {
-      await period.update(
-        {
-          status: "OPEN",
-        },
-        {
-          transaction,
-        },
-      );
-    }
+//     if (createdCount > 0 || updatedCount > 0) {
+//       await period.update(
+//         {
+//           status: "OPEN",
+//         },
+//         {
+//           transaction,
+//         },
+//       );
+//     }
 
-    // ======================================================
-    // COMMIT
-    // ======================================================
+//     // ======================================================
+//     // COMMIT
+//     // ======================================================
 
-    await transaction.commit();
+//     await transaction.commit();
 
-    // ======================================================
-    // RESPONSE
-    // ======================================================
+//     // ======================================================
+//     // RESPONSE
+//     // ======================================================
 
-    return res.json({
-      success: true,
+//     return res.json({
+//       success: true,
 
-      message:
-        `Đồng bộ công thành công. ` +
-        `Thêm mới: ${createdCount}, ` +
-        `cập nhật: ${updatedCount}, ` +
-        `không thay đổi: ${unchangedCount}, ` +
-        `bỏ qua: ${skippedCount}.`,
+//       message:
+//         `Đồng bộ công thành công. ` +
+//         `Thêm mới: ${createdCount}, ` +
+//         `cập nhật: ${updatedCount}, ` +
+//         `không thay đổi: ${unchangedCount}, ` +
+//         `bỏ qua: ${skippedCount}.`,
 
-      data: {
-        period: {
-          payroll_period_id: period.payroll_period_id,
+//       data: {
+//         period: {
+//           payroll_period_id: period.payroll_period_id,
 
-          start_date: period.start_date,
+//           start_date: period.start_date,
 
-          end_date: period.end_date,
+//           end_date: period.end_date,
 
-          full_time_standard_days: fullTimeStandardDays,
-        },
+//           full_time_standard_days: fullTimeStandardDays,
+//         },
 
-        rule: {
-          morning: "09:00 - 12:00",
+//         rule: {
+//           morning: "09:00 - 12:00",
 
-          afternoon: "13:00 - 17:00",
+//           afternoon: "13:00 - 17:00",
 
-          hours_per_day: 7,
-        },
+//           hours_per_day: 7,
+//         },
 
-        created: createdCount,
+//         created: createdCount,
 
-        updated: updatedCount,
+//         updated: updatedCount,
 
-        unchanged: unchangedCount,
+//         unchanged: unchangedCount,
 
-        skipped: skippedCount,
+//         skipped: skippedCount,
 
-        total: attendanceData.length,
+//         total: attendanceData.length,
 
-        employees: result,
-      },
-    });
-  } catch (error) {
-    // ======================================================
-    // ROLLBACK
-    // ======================================================
+//         employees: result,
+//       },
+//     });
+//   } catch (error) {
+//     // ======================================================
+//     // ROLLBACK
+//     // ======================================================
 
-    await transaction.rollback();
+//     await transaction.rollback();
 
-    console.error("syncPayrollAttendance:", error);
+//     console.error("syncPayrollAttendance:", error);
 
-    return res.status(500).json({
-      success: false,
+//     return res.status(500).json({
+//       success: false,
 
-      message: "Không thể đồng bộ dữ liệu chấm công",
+//       message: "Không thể đồng bộ dữ liệu chấm công",
 
-      error: error.message,
-    });
-  }
-};
+//       error: error.message,
+//     });
+//   }
+// };
 // ==========================================================
 // IMPORT PAYROLL ATTENDANCE
 //

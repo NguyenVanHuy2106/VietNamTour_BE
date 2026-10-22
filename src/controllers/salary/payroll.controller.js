@@ -738,3 +738,163 @@ exports.publishPayrollPeriod = async (req, res) => {
     });
   }
 };
+
+// ==========================================================
+// MARK PAYROLL AS PAID
+//
+// POST
+// /api/salary/payroll/mark-paid/:employeePayrollId
+// ==========================================================
+
+exports.markPayrollPaid = async (req, res) => {
+  try {
+    const employeePayrollId = Number(req.params.employeePayrollId);
+
+    const { payment_reference } = req.body || {};
+
+    // ====================================================
+    // VALIDATE ID
+    // ====================================================
+
+    if (!employeePayrollId) {
+      return res.status(400).json({
+        success: false,
+
+        message: "employee_payroll_id không hợp lệ.",
+      });
+    }
+
+    // ====================================================
+    // GET PAYROLL
+    // ====================================================
+
+    const payroll = await EmployeePayroll.findByPk(employeePayrollId);
+
+    if (!payroll) {
+      return res.status(404).json({
+        success: false,
+
+        message: "Không tìm thấy bảng lương.",
+      });
+    }
+
+    // ====================================================
+    // CHỈ CHO CHI KHI ĐÃ CÔNG BỐ
+    // ====================================================
+
+    if (payroll.status !== "PUBLISHED") {
+      return res.status(400).json({
+        success: false,
+
+        message: "Chỉ có thể đánh dấu đã chi đối với bảng lương đã công bố.",
+      });
+    }
+
+    // ====================================================
+    // CHECK AMOUNT
+    // ====================================================
+
+    const netSalary = Number(payroll.net_salary || 0);
+
+    if (netSalary <= 0) {
+      return res.status(400).json({
+        success: false,
+
+        message: "Số tiền thực nhận không hợp lệ.",
+      });
+    }
+
+    // ====================================================
+    // ALREADY PAID
+    // ====================================================
+
+    if (payroll.payment_status === "PAID") {
+      return res.status(400).json({
+        success: false,
+
+        message: "Bảng lương này đã được đánh dấu đã chi.",
+
+        data: {
+          employee_payroll_id: payroll.employee_payroll_id,
+
+          payment_status: payroll.payment_status,
+
+          paid_at: payroll.paid_at,
+
+          paid_by: payroll.paid_by,
+
+          payment_reference: payroll.payment_reference,
+        },
+      });
+    }
+
+    // ====================================================
+    // GET CURRENT USER
+    // Tùy middleware verifyToken của bạn
+    // ====================================================
+
+    const paidBy = req.user?.user_id || req.user?.id || null;
+
+    // ====================================================
+    // CLEAN REFERENCE
+    // ====================================================
+
+    const paymentReference = payment_reference
+      ? String(payment_reference).trim().slice(0, 100)
+      : null;
+
+    // ====================================================
+    // UPDATE
+    // ====================================================
+
+    await payroll.update({
+      payment_status: "PAID",
+
+      paid_at: new Date(),
+
+      paid_by: paidBy,
+
+      payment_reference: paymentReference,
+    });
+
+    // ====================================================
+    // RESPONSE
+    // ====================================================
+
+    return res.json({
+      success: true,
+
+      message: "Đã cập nhật trạng thái đã chi lương.",
+
+      data: {
+        employee_payroll_id: payroll.employee_payroll_id,
+
+        payroll_period_id: payroll.payroll_period_id,
+
+        user_id: payroll.user_id,
+
+        employee_name: payroll.employee_name,
+
+        net_salary: payroll.net_salary,
+
+        payment_status: payroll.payment_status,
+
+        paid_at: payroll.paid_at,
+
+        paid_by: payroll.paid_by,
+
+        payment_reference: payroll.payment_reference,
+      },
+    });
+  } catch (error) {
+    console.error("markPayrollPaid error:", error);
+
+    return res.status(500).json({
+      success: false,
+
+      message: "Không thể cập nhật trạng thái chi lương.",
+
+      error: error.message,
+    });
+  }
+};

@@ -44,6 +44,7 @@ const {
   getPayrollByPeriod,
   getEmployeePayroll,
   publishPayrollPeriod,
+  markPayrollPaid,
 } = require("../controllers/salary/payroll.controller");
 
 const {
@@ -59,6 +60,15 @@ const {
   getMyPayrolls,
   getMyPayrollDetail,
 } = require("../controllers/salary/myPayroll.controller");
+
+const {
+  getBanks,
+  getAllBankAccounts,
+  getBankAccountByUser,
+  saveBankAccount,
+  deleteBankAccount,
+  generatePayrollQR,
+} = require("../controllers/salary/bankPayment.controller");
 
 // ======================================================
 // 1. KHAI BÁO LƯƠNG NHÂN VIÊN
@@ -248,5 +258,32 @@ router.get("/api/salary/log/get", verifyToken, getPayrollLogs);
 router.get("/api/salary/my-payroll", verifyToken, getMyPayrolls);
 
 router.get("/api/salary/my-payroll/:id", verifyToken, getMyPayrollDetail);
+
+// ==========================================================
+// VIETQR / BANK ACCOUNT
+// ==========================================================
+router.get("/api/salary/banks", verifyToken, getBanks);
+
+router.get("/api/salary/bank-accounts", verifyToken, getAllBankAccounts);
+
+router.get(
+  "/api/salary/bank-account/:userId",
+  verifyToken,
+  getBankAccountByUser,
+);
+
+router.post("/api/salary/bank-account/save", verifyToken, saveBankAccount);
+
+router.delete(
+  "/api/salary/bank-account/delete/:id",
+  verifyToken,
+  deleteBankAccount,
+);
+
+router.post(
+  "/api/salary/payroll/generate-qr/:employeePayrollId",
+  verifyToken,
+  generatePayrollQR,
+);
 
 module.exports = router;
