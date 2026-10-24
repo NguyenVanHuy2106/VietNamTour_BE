@@ -1,5 +1,6 @@
 // const { fetchAndSaveProvinces } = require("./config/fetchProvince");
 require("dotenv").config(); // <-- dòng đầu
+require("./schedulers/leaveAccrual.scheduler");
 const express = require("express");
 const cors = require("cors"); // ✅ Thêm cors vào
 const app = express();
@@ -9,6 +10,12 @@ const routes = require("./routes");
 app.use(cors()); // ✅ Kích hoạt CORS
 
 app.use(express.json()); // Middleware để parse JSON body
+
+// const {
+//   runAutomaticLeaveAccrual,
+// } = require("./services/leave/leaveAccrual.service");
+
+// runAutomaticLeaveAccrual();
 
 // Kết nối DB
 // sequelize
