@@ -1,6 +1,8 @@
 // const { fetchAndSaveProvinces } = require("./config/fetchProvince");
 require("dotenv").config(); // <-- dòng đầu
 require("./schedulers/leaveAccrual.scheduler");
+require("./schedulers/leadAICleanup.scheduler");
+//require("./schedulers/companyDiscovery.scheduler");
 const express = require("express");
 const cors = require("cors"); // ✅ Thêm cors vào
 const app = express();

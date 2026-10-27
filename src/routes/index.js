@@ -23,6 +23,7 @@ const contractDocumentRoutes = require("./contractDocument.routes");
 const seoRoutes = require("./seo.routes");
 const salaryRoutes = require("./salary.route");
 const leaveRoutes = require("./leave.route");
+const leadAiRoutes = require("./lead_ai.routes");
 
 module.exports = [
   userRoutes,
@@ -50,4 +51,5 @@ module.exports = [
   seoRoutes,
   salaryRoutes,
   leaveRoutes,
+  leadAiRoutes,
 ];
