@@ -1,12 +1,12 @@
-const Company = require("./Company.model");
+const Company = require("./company.model");
 
-const DiscoveryTarget = require("./DiscoveryTarget.model");
+const DiscoveryTarget = require("./discoveryTarget.model");
 
-const DiscoveryRun = require("./DiscoveryRun.model");
+const DiscoveryRun = require("./discoveryRun.model");
 
-const CompanySource = require("./CompanySource.model");
+const CompanySource = require("./companySource.model");
 
-const DiscoveryGridCell = require("./DiscoveryGridCell.model");
+const DiscoveryGridCell = require("./discoveryGridCell.model");
 
 const GoongCompany = require("./goongCompany.model");
 
