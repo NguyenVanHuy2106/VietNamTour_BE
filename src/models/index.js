@@ -43,6 +43,8 @@ const EmployeePayrollVersion = require("./salary/employeePayrollVersion.model");
 
 const PayrollLog = require("./salary/payrollLog.model");
 
+const procurementEntity = require("./procurement/procurementEntity.model");
+
 const UserBankAccount = require("./salary/userBankAccount.model");
 
 // Một bài viết có nhiều tags, thông qua bảng trung gian PostTag
@@ -541,4 +543,6 @@ module.exports = {
   EmployeePayrollVersion,
   PayrollLog,
   UserBankAccount,
+
+  procurementEntity,
 };

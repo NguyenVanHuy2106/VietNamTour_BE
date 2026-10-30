@@ -9,6 +9,15 @@ const CompanySource = require("./companySource.model");
 const DiscoveryGridCell = require("./discoveryGridCell.model");
 
 const GoongCompany = require("./goongCompany.model");
+const TenderKeywordGroup = require("./tenderKeywordGroup.model");
+
+const TenderSource = require("./tenderSource.model");
+
+const TenderItem = require("./tenderItem.model");
+
+const TenderSearchLog = require("./tenderSearchLog.model");
+
+const TenderSetting = require("./tenderSetting.model");
 
 /**
  * =========================================================
@@ -56,6 +65,15 @@ GoongCompany.belongsTo(Company, {
   as: "sourceCompany",
 });
 
+TenderSource.hasMany(TenderItem, {
+  foreignKey: "source_id",
+  as: "tenderItems",
+});
+
+TenderItem.belongsTo(TenderSource, {
+  foreignKey: "source_id",
+  as: "source",
+});
 /**
  * =========================================================
  * EXPORTS
@@ -74,4 +92,9 @@ module.exports = {
   DiscoveryGridCell,
 
   GoongCompany,
+  TenderKeywordGroup,
+  TenderSource,
+  TenderItem,
+  TenderSearchLog,
+  TenderSetting,
 };
