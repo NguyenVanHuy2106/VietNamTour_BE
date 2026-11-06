@@ -15,6 +15,8 @@ const DEFAULT_IMAGE = "https://cdn.myvietnamtour.vn/uploads/1.png";
    HELPER: ESCAPE HTML
 ===================================================== */
 
+// HUY COMMENT
+
 const escapeHtml = (value = "") => {
   return String(value == null ? "" : value)
     .replace(/&/g, "&amp;")
