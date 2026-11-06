@@ -27,6 +27,7 @@
     "pg-hstore": "^2.3.4",
     "puppeteer": "^24.43.1",
     "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "sanitize-html": "2.17.4",
     "sequelize": "^6.37.6"
   },
   "devDependencies": {
