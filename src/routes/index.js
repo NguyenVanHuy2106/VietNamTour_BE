@@ -26,6 +26,7 @@ const leaveRoutes = require("./leave.route");
 const leadAiRoutes = require("./lead_ai.routes");
 const tenderWatcherRoutes = require("./tenderWatcher.routes");
 const procurementRoutes = require("./procurement.routes");
+const uploadImageRoutes = require("./uploadImage.routes");
 
 module.exports = [
   userRoutes,
@@ -56,4 +57,5 @@ module.exports = [
   leadAiRoutes,
   tenderWatcherRoutes,
   procurementRoutes,
+  uploadImageRoutes,
 ];
