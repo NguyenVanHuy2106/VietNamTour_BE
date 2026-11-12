@@ -47,6 +47,8 @@ const procurementEntity = require("./procurement/procurementEntity.model");
 
 const UserBankAccount = require("./salary/userBankAccount.model");
 
+const TourQuoteRequest = require("./tourQuoteRequest.model");
+
 // Một bài viết có nhiều tags, thông qua bảng trung gian PostTag
 Post.belongsToMany(Tag, {
   through: PostTag,
@@ -545,4 +547,6 @@ module.exports = {
   UserBankAccount,
 
   procurementEntity,
+
+  TourQuoteRequest,
 };
