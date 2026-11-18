@@ -49,6 +49,23 @@ const UserBankAccount = require("./salary/userBankAccount.model");
 
 const TourQuoteRequest = require("./tourQuoteRequest.model");
 
+// ==========================================================
+// QUOTATION MANAGEMENT MODELS
+// ==========================================================
+
+const QuotationTeam = require("./quotation/quotationTeam.model");
+const QuotationTeamMember = require("./quotation/quotationTeamMember.model");
+const QuotationTeamTransferLog = require("./quotation/quotationTeamTransferLog.model");
+const QuotationModuleAdmin = require("./quotation/quotationModuleAdmin.model");
+
+// ==========================================================
+// QUOTATION REQUEST MODELS
+// ==========================================================
+
+const QuotationRequest = require("./quotation/quotationRequest.model");
+const QuotationRequestAttachment = require("./quotation/quotationRequestAttachment.model");
+const QuotationRequestLog = require("./quotation/quotationRequestLog.model");
+
 // Một bài viết có nhiều tags, thông qua bảng trung gian PostTag
 Post.belongsToMany(Tag, {
   through: PostTag,
@@ -508,6 +525,112 @@ PayrollLog.belongsTo(User, {
   as: "creator",
 });
 
+// ======================================================
+// QUOTATION ASSOCIATIONS
+// ======================================================
+
+QuotationTeam.hasMany(QuotationTeamMember, {
+  foreignKey: "team_id",
+  sourceKey: "team_id",
+  as: "members",
+  constraints: false,
+});
+
+QuotationTeamMember.belongsTo(QuotationTeam, {
+  foreignKey: "team_id",
+  targetKey: "team_id",
+  as: "team",
+  constraints: false,
+});
+
+QuotationTeamTransferLog.belongsTo(QuotationTeam, {
+  foreignKey: "from_team_id",
+  targetKey: "team_id",
+  as: "fromTeam",
+  constraints: false,
+});
+
+QuotationTeamTransferLog.belongsTo(QuotationTeam, {
+  foreignKey: "to_team_id",
+  targetKey: "team_id",
+  as: "toTeam",
+  constraints: false,
+});
+
+// ======================================================
+// QUOTATION REQUEST ASSOCIATIONS
+// ======================================================
+
+// 1 yêu cầu báo giá có nhiều tài liệu đính kèm
+QuotationRequest.hasMany(QuotationRequestAttachment, {
+  foreignKey: "request_id",
+  sourceKey: "request_id",
+  as: "attachments",
+});
+
+QuotationRequestAttachment.belongsTo(QuotationRequest, {
+  foreignKey: "request_id",
+  targetKey: "request_id",
+  as: "request",
+});
+
+// 1 yêu cầu báo giá có nhiều lịch sử
+QuotationRequest.hasMany(QuotationRequestLog, {
+  foreignKey: "request_id",
+  sourceKey: "request_id",
+  as: "history",
+});
+
+QuotationRequestLog.belongsTo(QuotationRequest, {
+  foreignKey: "request_id",
+  targetKey: "request_id",
+  as: "request",
+});
+
+// Mỗi yêu cầu được phân công cho 1 nhóm kinh doanh
+QuotationRequest.belongsTo(QuotationTeam, {
+  foreignKey: "team_id",
+  targetKey: "team_id",
+  as: "team",
+  constraints: false,
+});
+
+// 1 nhóm kinh doanh có nhiều yêu cầu báo giá
+QuotationTeam.hasMany(QuotationRequest, {
+  foreignKey: "team_id",
+  sourceKey: "team_id",
+  as: "quotationRequests",
+  constraints: false,
+});
+
+// Người tạo yêu cầu
+QuotationRequest.belongsTo(User, {
+  foreignKey: "created_by",
+  as: "creator",
+  constraints: false,
+});
+
+// Người cập nhật yêu cầu
+QuotationRequest.belongsTo(User, {
+  foreignKey: "updated_by",
+  as: "updater",
+  constraints: false,
+});
+
+// Người phân công nhóm
+QuotationRequest.belongsTo(User, {
+  foreignKey: "assigned_by",
+  as: "assigner",
+  constraints: false,
+});
+
+// Người thực hiện thao tác trong lịch sử
+QuotationRequestLog.belongsTo(User, {
+  foreignKey: "performed_by",
+  as: "performer",
+  constraints: false,
+});
+
 // Xuất các model đã được định nghĩa mối quan hệ
 module.exports = {
   Post,
@@ -549,4 +672,13 @@ module.exports = {
   procurementEntity,
 
   TourQuoteRequest,
+
+  QuotationTeam,
+  QuotationTeamMember,
+  QuotationTeamTransferLog,
+  QuotationModuleAdmin,
+
+  QuotationRequest,
+  QuotationRequestAttachment,
+  QuotationRequestLog,
 };

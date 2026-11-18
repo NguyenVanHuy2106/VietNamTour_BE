@@ -15,6 +15,9 @@ const {
   updateCare,
   updateEntity,
 } = require("../controllers/procurement/procurementEntity.controller");
+const {
+  importProcurementFromUrl,
+} = require("../controllers/procurement/procurement.controller");
 
 // ==========================================================
 // IMPORT
@@ -57,5 +60,7 @@ router.put("/api/procurement/entities/:id/care", verifyToken, updateCare);
 // ==========================================================
 
 router.put("/api/procurement/entities/:id", verifyToken, updateEntity);
+
+router.post("/api/procurement/import-from-url", importProcurementFromUrl);
 
 module.exports = router;

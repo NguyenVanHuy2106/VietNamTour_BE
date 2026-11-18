@@ -28,6 +28,8 @@ const tenderWatcherRoutes = require("./tenderWatcher.routes");
 const procurementRoutes = require("./procurement.routes");
 const uploadImageRoutes = require("./uploadImage.routes");
 const tourQuoteRequestRoutes = require("./tourQuoteRequest.routes");
+const quotationTeamRoutes = require("./quotationTeam.routes");
+const quotationRequestRoutes = require("./quotationRequest.routes");
 
 module.exports = [
   userRoutes,
@@ -60,4 +62,6 @@ module.exports = [
   procurementRoutes,
   uploadImageRoutes,
   tourQuoteRequestRoutes,
+  quotationTeamRoutes,
+  quotationRequestRoutes,
 ];
