@@ -30,6 +30,7 @@ const uploadImageRoutes = require("./uploadImage.routes");
 const tourQuoteRequestRoutes = require("./tourQuoteRequest.routes");
 const quotationTeamRoutes = require("./quotationTeam.routes");
 const quotationRequestRoutes = require("./quotationRequest.routes");
+const quotationPdfRoutes = require("./quotationPdf.routes");
 
 module.exports = [
   userRoutes,
@@ -64,4 +65,5 @@ module.exports = [
   tourQuoteRequestRoutes,
   quotationTeamRoutes,
   quotationRequestRoutes,
+  quotationPdfRoutes,
 ];

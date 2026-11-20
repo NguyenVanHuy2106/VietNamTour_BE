@@ -9,6 +9,7 @@ const {
   QuotationRequest,
   QuotationRequestAttachment,
   QuotationRequestLog,
+  QuotationRequestItem,
 } = require("../../models");
 
 const sequelize = QuotationRequest.sequelize;

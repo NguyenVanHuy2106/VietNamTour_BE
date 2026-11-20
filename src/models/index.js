@@ -65,6 +65,7 @@ const QuotationModuleAdmin = require("./quotation/quotationModuleAdmin.model");
 const QuotationRequest = require("./quotation/quotationRequest.model");
 const QuotationRequestAttachment = require("./quotation/quotationRequestAttachment.model");
 const QuotationRequestLog = require("./quotation/quotationRequestLog.model");
+const QuotationRequestItem = require("./quotation/quotationRequestItem.model");
 
 // Một bài viết có nhiều tags, thông qua bảng trung gian PostTag
 Post.belongsToMany(Tag, {
@@ -631,6 +632,17 @@ QuotationRequestLog.belongsTo(User, {
   constraints: false,
 });
 
+QuotationRequest.hasMany(QuotationRequestItem, {
+  foreignKey: "request_id",
+  as: "items",
+  onDelete: "CASCADE",
+});
+
+QuotationRequestItem.belongsTo(QuotationRequest, {
+  foreignKey: "request_id",
+  as: "request",
+});
+
 // Xuất các model đã được định nghĩa mối quan hệ
 module.exports = {
   Post,
@@ -681,4 +693,6 @@ module.exports = {
   QuotationRequest,
   QuotationRequestAttachment,
   QuotationRequestLog,
+
+  QuotationRequestItem,
 };

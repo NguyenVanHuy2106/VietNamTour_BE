@@ -23,6 +23,10 @@ const {
   updateMyTeamRequestStatus,
 } = require("../controllers/quotation/quotationRequestTeam.controller");
 
+const {
+  getFullDetail,
+} = require("../controllers/quotation/quotationRequestDetail.controller");
+
 // ============================================================
 // QUOTATION REQUEST ROUTES - VIET NAM TOUR ERP
 //
@@ -161,5 +165,11 @@ router.put("/api/quotationRequest/:id", verifyToken, updateRequest);
 // ============================================================
 
 router.delete("/api/quotationRequest/:id", verifyToken, deleteRequest);
+
+router.get(
+  "/api/quotationRequest/detail/:requestId",
+  verifyToken,
+  getFullDetail,
+);
 
 module.exports = router;
